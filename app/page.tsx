@@ -13,24 +13,9 @@ import type { Job } from "@/lib/types";
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
 
-  // Fetch live featured jobs (curated + live)
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/jobs?featured=true');
-        const data = await res.json();
-        setFeaturedJobs(Array.isArray(data.jobs) ? data.jobs : []);
-      } catch {
-        // fallback: use a few from static
-        const staticFeatured = jobs.filter(j => j.featured && !j.expired).slice(0, 6);
-        setFeaturedJobs(staticFeatured);
-      }
-      setLoadingFeatured(false);
-    })();
-  }, []);
+  // Use static curated featured jobs for reliable, instant loading (no async dependency)
+  const featuredJobs = jobs.filter(j => j.featured && !j.expired).slice(0, 6);
 
   const featuredDrops = curatedDrops.filter((d) => d.featured).slice(0, 3);
 
@@ -105,12 +90,12 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {loadingFeatured && featuredJobs.length === 0 ? (
-            <div className="col-span-3 py-8 text-center text-sm text-zinc-400">Loading featured roles...</div>
-          ) : (
+          {featuredJobs.length > 0 ? (
             featuredJobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))
+          ) : (
+            <div className="col-span-3 py-8 text-center text-sm text-zinc-400">No featured roles at the moment.</div>
           )}
         </div>
 
