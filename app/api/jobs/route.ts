@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { jobs as curatedJobs } from '@/lib/mock-data';
+import { jobs as curatedJobs, getLocationTag } from '@/lib/mock-data';
 import { fetchLiveJobs, ScrapedJob } from '@/lib/scrapers';
 import type { Job, Ecosystem, WorkMode, EmploymentType, Seniority, Category, CompanyType } from '@/lib/types';
 
@@ -25,6 +25,22 @@ function toJobFromScraped(l: ScrapedJob, index: number): Job {
     company = l.source.split(' ')[0] || 'Web3 Company';
   }
 
+  const liveLocTag = getLocationTag(l.location || 'Remote');
+  const liveTags = ['Live', ...(liveLocTag !== 'Remote' ? [liveLocTag] : [])];
+
+  // Smart ecosystem inference from source (so Monad etc. get correct tags)
+  let ecosystem: Ecosystem = 'Multi-chain';
+  const srcLower = (l.source || '').toLowerCase();
+  if (srcLower.includes('monad') || srcLower.includes('eco-jobs')) {
+    ecosystem = 'Monad';
+  } else if (srcLower.includes('solana')) {
+    ecosystem = 'Solana';
+  } else if (srcLower.includes('avax') || srcLower.includes('avalanche')) {
+    ecosystem = 'Avalanche';
+  } else if (srcLower.includes('ethereum')) {
+    ecosystem = 'Ethereum';
+  }
+
   return {
     id: `live-${Date.now()}-${index}`,
     title: l.title,
@@ -42,8 +58,8 @@ function toJobFromScraped(l: ScrapedJob, index: number): Job {
     requirements: [],
     responsibilities: [],
     nice_to_have: [],
-    tags: ['Live'],
-    ecosystem: 'Multi-chain' as Ecosystem,
+    tags: liveTags,
+    ecosystem,
     company_type: 'Startup' as CompanyType,
     date_posted: today,
     date_added: now.toISOString(),
@@ -139,8 +155,8 @@ export async function GET(request: Request) {
       ? "Pure curated snapshot (curatedOnly=1)."
       : featuredOnly
         ? "Featured curated roles only."
-        : "Live-enriched: curated high-signal base + real-time scraped jobs from Lever and other boards (local dev).",
-    sources: ["curated", "lever", "cryptocurrencyjobs.co"],
+        : "Live-enriched from your sources: jobs.solana.com, jobs.avax.network, eco-jobs.monad.xyz, ethereumjobboard.com, web3.career, cryptojobslist, cryptocurrencyjobs.co, midnight.network, dragonfly, block.xyz, crypto-careers, beincrypto, jobstash, remote3.co",
+    sources: ["curated", "solana", "avax", "monad-eco", "ethereumjobboard", "web3.career", "cryptojobslist", "cryptocurrencyjobs", "midnight", "dragonfly", "block", "crypto-careers", "beincrypto", "jobstash", "remote3", "perle-rippling"],
     jobs: result,
   });
 }

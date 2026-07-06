@@ -47,52 +47,82 @@ export async function scrapeSimpleBoard(url: string, sourceName: string): Promis
     const $ = cheerio.load(html);
     const jobs: ScrapedJob[] = [];
 
-    // Try common patterns for job boards
+    // Much broader selectors for modern job boards (cards, tables, lists)
     const selectors = [
       'a[href*="job"]', 
+      'a[href*="/jobs/"]',
+      'a[href*="/career"]',
       '.job', 
       '.listing', 
-      'h2 a, h3 a', 
+      '.job-listing',
+      'h2 a, h3 a, h4 a', 
       '.job-title a', 
-      '[class*="job"] a'
+      '[class*="job"] a',
+      'article a',
+      'li a[href*="job"]'
     ];
 
     $(selectors.join(', ')).each((_, el) => {
       let title = $(el).text().trim();
-      const link = $(el).attr('href') || $(el).find('a').attr('href') || '';
+      let link = $(el).attr('href') || $(el).find('a').attr('href') || '';
 
-      // If the element itself is not the title link, look around
-      if (title.length < 5 || title.toLowerCase().includes('apply')) {
-        const parent = $(el).closest('li, article, div, .job');
-        title = parent.find('h2, h3, .title, [class*="title"]').first().text().trim() || title;
+      // Look in parent for better title if current text is weak
+      if (title.length < 6 || title.toLowerCase().includes('apply') || title.toLowerCase().includes('view')) {
+        const parent = $(el).closest('li, article, div, .job, .card, tr');
+        title = parent.find('h1, h2, h3, h4, .title, [class*="title"], strong').first().text().trim() || title;
       }
 
       title = title.replace(/\s+/g, ' ').trim();
 
-      if (title && link && isRealJob(title) && title.length > 5) {
-        const fullUrl = link.startsWith('http') ? link : new URL(link, url).toString();
-        // Try to guess company from nearby text or source
-        const company = $(el).closest('.job, li, article').find('.company, .org, [class*="company"]').first().text().trim() || sourceName;
+      if (!title || title.length < 6 || !isRealJob(title)) return;
 
-        jobs.push({
-          title,
-          company: company.length > 2 ? company : sourceName,
-          applyUrl: fullUrl,
-          source: sourceName
-        });
+      if (!link) {
+        // Try to find a link in the same container
+        link = $(el).closest('li, article, div').find('a').first().attr('href') || '';
       }
+
+      if (!link || link.includes('javascript')) return;
+
+      const fullUrl = link.startsWith('http') ? link : new URL(link, url).toString();
+
+      // Better company extraction
+      const container = $(el).closest('li, article, div, tr, .job');
+      let company = container.find('.company, .org, [class*="company"], .employer, strong').first().text().trim();
+
+      if (!company || company.length < 2) {
+        // Fallback: look for text that looks like a company near the title
+        const nearbyText = container.text().replace(title, '').replace(/\s+/g, ' ').trim();
+        const companyMatch = nearbyText.match(/([A-Z][A-Za-z0-9 .&'-]{2,40})/);
+        company = companyMatch ? companyMatch[1].trim() : sourceName;
+      }
+
+      // Clean company name
+      company = company
+        .replace(/Location|Posted|Compensation|Remote|Hybrid|Full Time|Senior|Mid|Lead|Contract|Engineer|Developer/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 50);
+
+      if (company.length < 2) company = sourceName;
+
+      jobs.push({
+        title: title.substring(0, 120),
+        company,
+        applyUrl: fullUrl,
+        source: sourceName
+      });
     });
 
-    // Dedupe
+    // Dedupe by title
     const seen = new Set<string>();
     const unique = jobs.filter(j => {
-      const k = j.title.toLowerCase().slice(0, 30);
+      const k = j.title.toLowerCase().slice(0, 35);
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
     });
 
-    return unique.slice(0, 15);
+    return unique.slice(0, 20);
   } catch {
     return [];
   }
@@ -218,14 +248,14 @@ export async function scrapeLeverBoard(leverSlug: string, companyFallback: strin
  */
 export async function fetchLiveJobs(): Promise<ScrapedJob[]> {
   const sources = [
-    // Getro boards (Solana, Avalanche style - common in original data)
-    () => scrapeGetroBoard('https://jobs.solana.com/jobs', 'Solana Jobs'),
-    () => scrapeGetroBoard('https://jobs.avax.network/jobs', 'Avalanche Jobs'),
-
-    // Other major sources from the list
+    // User's requested sources for live job scraping
+    // Passing higher maxResults for boards that have lots of listings (e.g. Solana has 300+)
+    () => scrapeGetroBoard('https://jobs.solana.com/jobs', 'Solana Jobs', 300),
+    () => scrapeGetroBoard('https://jobs.avax.network/jobs', 'Avalanche Jobs', 150),
+    () => scrapeGetroBoard('https://eco-jobs.monad.xyz/jobs', 'Monad Eco Jobs', 100),
     () => scrapeEthereumJobBoard(),
     () => scrapeWeb3Career(),
-    () => scrapeCryptoJobsList(),
+    () => fetchCryptoJobsListRSS(),
     () => scrapeCryptocurrencyJobsCo(),
     () => scrapeMidnightCareers(),
     () => scrapeDragonflyJobs(),
@@ -234,14 +264,8 @@ export async function fetchLiveJobs(): Promise<ScrapedJob[]> {
     () => scrapeBeInCrypto(),
     () => scrapeJobstash(),
     () => scrapeRemote3(),
-
-    // Perle and YZI as requested
+    // Additional Perle (Rippling) source
     () => scrapePerleRippling(),
-    () => scrapeYZITalent(),
-
-    // Existing reliable ones
-    () => scrapeLeverBoard('jito.wtf', 'Jito Labs'),
-    () => scrapeLeverBoard('arbitrumfoundation', 'Arbitrum Foundation'),
   ];
 
   const results = await Promise.allSettled(sources.map(fn => fn()));
@@ -264,71 +288,130 @@ export async function fetchLiveJobs(): Promise<ScrapedJob[]> {
       return true;
     });
 
-  return unique.slice(0, 80); // allow good volume
+  // Return a healthy volume. For high-signal boards like Solana you can get 100+ from live.
+  return unique.slice(0, 250);
 }
 
 // --- Specific robust scrapers for the requested sources ---
 
-async function scrapeGetroBoard(url: string, sourceName: string): Promise<ScrapedJob[]> {
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Orpheuzkaze/1.0)' } });
-    if (!res.ok) return [];
-    const html = await res.text();
-    const $ = cheerio.load(html);
-    const jobs: ScrapedJob[] = [];
+export async function scrapeGetroBoard(url: string, sourceName: string, maxResults: number = 200): Promise<ScrapedJob[]> {
+  const jobs: ScrapedJob[] = [];
+  const seen = new Set<string>();
 
-    // Getro structure: job title link followed by company link like [Company](/companies/...)
-    $('a[href*="/jobs/"]').each((_, el) => {
-      const $el = $(el);
-      const href = $el.attr('href') || '';
-      let title = $el.text().trim().replace(/\s+/g, ' ');
+  // Try the main page + several pagination / search param variations.
+  // Getro boards are JS-heavy; server HTML usually only contains a subset.
+  // We try common patterns that sometimes return richer SSR or different slices.
+  const pageUrls = [
+    url,
+    url.includes('?') ? `${url}&page=1&per_page=100` : `${url}?page=1&per_page=100`,
+    url.includes('?') ? `${url}&page=2&per_page=50` : `${url}?page=2&per_page=50`,
+    url.includes('?') ? `${url}&page=3` : `${url}?page=3`,
+    url.includes('?') ? `${url}&q=&per_page=50` : `${url}?q=&per_page=50`,
+  ];
 
-      if (!isRealJob(title) || title.length < 6) return;
-
-      // Company is usually the next sibling link or in nearby text like [Kast](/companies/...)
-      const container = $el.closest('div, li, article');
-      let company = container.find('a[href*="/companies/"]').first().text().trim();
-
-      if (!company) {
-        // fallback to alt on img near it or previous text
-        company = container.find('img[alt]').attr('alt') || '';
-      }
-      if (!company || company.length < 2 || company.toLowerCase() === title.toLowerCase().slice(0, company.length).toLowerCase() || company.length > 40) {
-        // Try to find company name in the container text near the title
-        let fullText = container.text().replace(title, '').replace(/\s+/g, ' ').trim();
-        // Getro pages often have "CompanyLocation" or "Company Posted" glued together
-        fullText = fullText.replace(/Location|Posted|Compensation|Remote|Hybrid|Full|Part|Senior|Mid|Lead|Contract/gi, ' $& ').replace(/\s+/g, ' ').trim();
-        const match = fullText.match(/([A-Z][a-zA-Z0-9.& -]{2,30})/);
-        company = (match ? match[1] : sourceName).trim();
-      }
-
-      // Final aggressive clean for Getro-style concatenation
-      company = company
-        .replace(/Location|Posted|Compensation|Remote|Hybrid|Full Time|Senior|Mid|Lead/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      const fullUrl = href.startsWith('http') ? href : new URL(href, url).toString();
-
-      jobs.push({
-        title: title.substring(0, 120),
-        company: company.substring(0, 50),
-        applyUrl: fullUrl,
-        source: sourceName
+  for (const pageUrl of pageUrls) {
+    try {
+      const res = await fetch(pageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
       });
-    });
+      if (!res.ok) continue;
 
-    // dedupe within source
-    const seen = new Set();
-    return jobs.filter(j => {
-      const k = j.title.toLowerCase().slice(0,30);
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    }).slice(0, 15);
-  } catch {
-    return [];
+      const html = await res.text();
+      const $ = cheerio.load(html);
+
+      // Primary Getro selector + broader fallbacks
+      const selectors = [
+        'a[href*="/jobs/"]',
+        'a[href*="/job/"]',
+        '[class*="job"] a[href]',
+        'h3 a, h2 a, .title a'
+      ];
+
+      $(selectors.join(', ')).each((_, el) => {
+        const $el = $(el);
+        let href = $el.attr('href') || '';
+        let title = $el.text().trim().replace(/\s+/g, ' ');
+
+        // Only accept real individual job postings (must have /jobs/<id>-slug pattern)
+        if (!/\/jobs\/[^/]*\d/.test(href)) return;
+
+        // If the link text is weak, look for better title in ancestors
+        if (title.length < 8 || !isRealJob(title)) {
+          const container = $el.closest('div, li, article, [class*="job"], tr');
+          title = container.find('h1, h2, h3, h4, [class*="title"], strong').first().text().trim().replace(/\s+/g, ' ') || title;
+        }
+
+        if (!href || !isRealJob(title) || title.length < 6) return;
+
+        // Resolve full URL and clean hash
+        let fullUrl = href.startsWith('http') ? href : new URL(href, url).toString();
+        fullUrl = fullUrl.split('#')[0];
+
+        const container = $el.closest('div, li, article, [class*="job"], tr, [class*="info"]');
+
+        // === Smart title / company split ===
+        // Container text is usually: "Full TitleCompanyNameLocation: CityPosted: ..."
+        let fullText = container.text().replace(/\s+/g, ' ').trim();
+
+        // Remove the title we already have from the front
+        let rest = fullText.replace(title, '').trim();
+
+        // Cut off at known separators
+        const cutIndex = rest.search(/Location:|Posted:|Compensation|Remote|Hybrid|Full[- ]?Time|Senior|Mid|Lead|Contract|\+ \d+ more/i);
+        if (cutIndex > 0) rest = rest.slice(0, cutIndex).trim();
+
+        // Company is usually the first capitalized token(s) after title
+        let company = '';
+        const companyMatch = rest.match(/^([A-Z][A-Za-z0-9.&' -]{1,42})/);
+        if (companyMatch) company = companyMatch[1].trim();
+
+        if (!company || company.length < 2 || company.length > 45 || company.toLowerCase() === title.toLowerCase().slice(0, company.length)) {
+          // Fallbacks
+          company = container.find('a[href*="/companies/"]').first().text().trim() ||
+                    container.find('img[alt]').attr('alt') || '';
+        }
+
+        company = company
+          .replace(/Location|Posted|Compensation|Remote|Hybrid|Full Time|Senior|Mid|Lead/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 50);
+
+        // Extract location if present
+        let location = '';
+        const locMatch = fullText.match(/Location:\s*([^P]+?)(Posted|Compensation|Remote|$)/i);
+        if (locMatch) location = locMatch[1].trim().replace(/;+$/, '').trim();
+
+        // Final quality filters
+        if (!company || company.length < 2) company = sourceName.replace(' Jobs', '');
+        if (title.toLowerCase() === company.toLowerCase()) return; // skip pure company pages
+
+        const key = (title + '|' + company).toLowerCase().slice(0, 40);
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        jobs.push({
+          title: title.substring(0, 120),
+          company,
+          location: location || undefined,
+          applyUrl: fullUrl,
+          source: sourceName
+        });
+
+        if (jobs.length >= maxResults) return false; // stop early
+      });
+
+      if (jobs.length >= maxResults) break;
+    } catch {
+      // continue to next page attempt
+    }
   }
+
+  return jobs;
 }
 
 async function scrapeEthereumJobBoard(): Promise<ScrapedJob[]> {
@@ -364,21 +447,51 @@ async function scrapeEthereumJobBoard(): Promise<ScrapedJob[]> {
 async function scrapeWeb3Career(): Promise<ScrapedJob[]> {
   const url = 'https://web3.career';
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' } });
     const html = await res.text();
     const $ = cheerio.load(html);
     const jobs: ScrapedJob[] = [];
 
-    $('a[href*="/"][href*="-"]').each((_, el) => {  // typical job slugs
+    // web3.career uses tables or cards with job titles
+    $('a[href*="/jobs/"], a[href*="/job/"], .job-row a, table a').each((_, el) => {
+      let title = $(el).text().trim();
       const href = $(el).attr('href') || '';
-      const title = $(el).text().trim();
-      if (!title || title.length < 8 || !isRealJob(title)) return;
 
-      const container = $(el).closest('tr, li, div');
-      const company = container.find('a[href*="/"]').not(el).first().text().trim() || 'Web3 Company';
-      jobs.push({ title, company, applyUrl: new URL(href, url).toString(), source: 'web3.career' });
+      if (title.length < 6 || !isRealJob(title)) {
+        // try parent for title
+        const parent = $(el).closest('tr, li, div');
+        title = parent.find('h3, h4, .job-title, strong').first().text().trim() || title;
+      }
+
+      title = title.replace(/\s+/g, ' ').trim();
+      if (!title || title.length < 6 || !isRealJob(title)) return;
+
+      const container = $(el).closest('tr, li, article, div');
+      let company = container.find('.company, [class*="company"], a[href*="/companies"]').first().text().trim();
+
+      if (!company || company.length < 2) {
+        const text = container.text();
+        const match = text.match(/([A-Z][A-Za-z0-9.& -]{2,35})/);
+        company = match ? match[1].trim() : 'Web3 Company';
+      }
+
+      const fullUrl = href.startsWith('http') ? href : new URL(href, url).toString();
+
+      jobs.push({
+        title: title.substring(0, 120),
+        company: company.substring(0, 50),
+        applyUrl: fullUrl,
+        source: 'web3.career'
+      });
     });
-    return jobs.slice(0, 10);
+
+    const seen = new Set();
+    return jobs.filter(j => {
+      const k = j.title.toLowerCase().slice(0, 30);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 18);
   } catch { return []; }
 }
 
@@ -405,23 +518,51 @@ async function scrapeCryptoJobsList(): Promise<ScrapedJob[]> {
 }
 
 async function scrapeCryptocurrencyJobsCo(): Promise<ScrapedJob[]> {
-  // Improved version for the main page
   const url = 'https://cryptocurrencyjobs.co';
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' } });
     const html = await res.text();
     const $ = cheerio.load(html);
     const jobs: ScrapedJob[] = [];
 
-    $('li, article').each((_, c) => {
-      const title = $(c).find('h2, h3').first().text().trim();
-      if (!isRealJob(title)) return;
-      const linkEl = $(c).find('a[href*="/"]').first();
-      const link = linkEl.attr('href') || '';
-      const company = $(c).find('img[alt]').attr('alt') || $(c).text().split('\n').map(s=>s.trim()).find(s => s.length > 2 && s.length < 30) || 'Crypto Co';
-      if (link) jobs.push({ title, company, applyUrl: new URL(link, url).toString(), source: 'cryptocurrencyjobs.co' });
+    // Target job cards / listings
+    $('li, article, .job, [class*="job"]').each((_, c) => {
+      const $c = $(c);
+      let title = $c.find('h2, h3, .title').first().text().trim();
+      if (!title) title = $c.find('a').first().text().trim();
+
+      if (!isRealJob(title) || title.length < 6) return;
+
+      const linkEl = $c.find('a[href*="/"]').first();
+      let link = linkEl.attr('href') || '';
+      if (!link) link = $c.find('a').attr('href') || '';
+
+      let company = $c.find('img[alt]').attr('alt') || 
+                    $c.find('.company, strong, [class*="company"]').first().text().trim();
+
+      if (!company || company.length < 2) {
+        const parts = $c.text().split('\n').map(s => s.trim()).filter(Boolean);
+        company = parts.find(p => p.length > 2 && p.length < 35 && !/remote|full|part|contract|senior|engineer/i.test(p)) || 'Crypto Co';
+      }
+
+      if (link) {
+        const fullUrl = link.startsWith('http') ? link : `https://cryptocurrencyjobs.co${link}`;
+        jobs.push({ 
+          title: title.substring(0, 120), 
+          company: company.substring(0, 50), 
+          applyUrl: fullUrl, 
+          source: 'cryptocurrencyjobs.co' 
+        });
+      }
     });
-    return jobs.slice(0, 12);
+
+    const seen = new Set();
+    return jobs.filter(j => {
+      const k = j.title.toLowerCase().slice(0, 30);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 15);
   } catch { return []; }
 }
 
@@ -512,6 +653,136 @@ async function scrapeYZITalent(): Promise<ScrapedJob[]> {
  * - Add a simple /admin or import form that lets you paste new jobs.
  * - Run a scheduled job (Vercel Cron or external) that updates a Supabase table.
  */
+
+/* ============================================================
+   HEADLESS SCRAPER (for JS-heavy boards like jobs.solana.com)
+   ============================================================ */
+
+let playwright: any = null;
+
+async function getPlaywright() {
+  if (playwright) return playwright;
+  try {
+    // Dynamic import so the app still runs if playwright isn't installed
+    playwright = await import('playwright');
+    return playwright;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Scrape a Getro-style board using a real browser.
+ * This can get the full list (hundreds of jobs) because it executes JS + scrolls.
+ */
+export async function scrapeGetroBoardHeadless(
+  url: string,
+  sourceName: string,
+  maxResults = 400
+): Promise<ScrapedJob[]> {
+  const pw = await getPlaywright();
+  if (!pw) {
+    console.warn('[scraper] Playwright not available — falling back to cheerio (limited results).');
+    return scrapeGetroBoard(url, sourceName, 50);
+  }
+
+  const jobs: ScrapedJob[] = [];
+  const seen = new Set<string>();
+
+  const browser = await pw.chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    viewport: { width: 1280, height: 2000 }
+  });
+
+  try {
+    const page = await context.newPage();
+
+    console.log(`[headless] Loading ${url} ...`);
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+
+    // Wait for initial jobs to appear
+    await page.waitForSelector('a[href*="/jobs/"]', { timeout: 15000 }).catch(() => {});
+
+    // Scroll repeatedly to trigger infinite / virtual loading
+    let previousCount = 0;
+    for (let i = 0; i < 12; i++) {   // up to ~12 scrolls
+      await page.evaluate(() => window.scrollBy(0, 2000));
+      await page.waitForTimeout(650); // give the board time to load more
+
+      const currentLinks = await page.$$eval('a[href*="/jobs/"]', (els: any[]) =>
+        els.map((e: any) => (e as any).href)
+      );
+
+      if (currentLinks.length === previousCount) {
+        // no more new items
+        break;
+      }
+      previousCount = currentLinks.length;
+
+      if (currentLinks.length >= maxResults) break;
+    }
+
+    // Extract from the final DOM state
+    const items = await page.$$eval('a[href*="/jobs/"]', (anchors: any[]) => {
+      return anchors.map(a => {
+        const href = a.href || a.getAttribute('href') || '';
+        let title = (a.textContent || '').trim().replace(/\s+/g, ' ');
+
+        // Walk up to find better title / company context
+        let container: any = a.parentElement;
+        for (let depth = 0; depth < 4 && container; depth++) {
+          const t = container.querySelector('h1,h2,h3,h4,[class*="title"]');
+          if (t && t.textContent) {
+            title = t.textContent.trim().replace(/\s+/g, ' ');
+            break;
+          }
+          container = container.parentElement;
+        }
+
+        // Try to get company
+        let company = '';
+        if (container) {
+          const companyLink = container.querySelector('a[href*="/companies/"]');
+          if (companyLink) company = companyLink.textContent?.trim() || '';
+          if (!company) {
+            const img = container.querySelector('img[alt]');
+            if (img) company = img.getAttribute('alt') || '';
+          }
+        }
+
+        return { title, href, company };
+      });
+    });
+
+    for (const item of items) {
+      if (!item.title || item.title.length < 6 || !isRealJob(item.title)) continue;
+
+      const fullUrl = item.href.startsWith('http') ? item.href : new URL(item.href, url).toString();
+      let company = (item.company || sourceName).trim().slice(0, 50);
+
+      const key = (item.title + '|' + company).toLowerCase().slice(0, 45);
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      jobs.push({
+        title: item.title.substring(0, 120),
+        company,
+        applyUrl: fullUrl,
+        source: sourceName
+      });
+
+      if (jobs.length >= maxResults) break;
+    }
+  } catch (err) {
+    console.warn('[headless] Error during scrape:', (err as Error).message);
+  } finally {
+    await browser.close();
+  }
+
+  console.log(`[headless] ${sourceName} → extracted ${jobs.length} jobs`);
+  return jobs;
+}
 
 // Scraper for cryptocurrencyjobs.co (engineering + others) - returns current listings
 export async function scrapeCryptocurrencyJobs(): Promise<ScrapedJob[]> {

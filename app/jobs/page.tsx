@@ -7,6 +7,7 @@ import JobFilters from "@/components/JobFilters";
 import SearchBar from "@/components/SearchBar";
 import { Category, Ecosystem, WorkMode, EmploymentType, Seniority } from "@/lib/types";
 import type { Job } from "@/lib/types";
+import { jobs as curatedJobs } from "@/lib/mock-data";
 
 function JobsContent() {
   const searchParams = useSearchParams();
@@ -42,17 +43,18 @@ function JobsContent() {
   async function loadJobs(force = false) {
     setLoading(true);
     try {
-      // Use only curated high-quality mock data for reliable UX (live scraping is experimental/noisy)
-      const qs = force ? '?curatedOnly=1&refresh=1' : '?curatedOnly=1';
+      // Default to live scraping from the configured sources (Solana, Avax, EthereumJobBoard, Web3Career, CryptoJobsList, etc.)
+      // Use ?curatedOnly=1 to get only the high-signal curated list (more stable)
+      const qs = force ? '?refresh=1' : '';   // empty = live enrichment enabled
       const res = await fetch(`/api/jobs${qs}`);
       const data = await res.json();
       const fetched: Job[] = Array.isArray(data.jobs) ? data.jobs : [];
       setApiJobs(fetched);
       setLastUpdated(data.updated || new Date().toISOString());
-      setLiveAdded(0); // no live for main list
+      setLiveAdded(data.liveMerged || 0);
     } catch (e) {
-      // graceful fallback to static
-      setApiJobs([]);
+      // graceful fallback to static curated
+      setApiJobs(curatedJobs.filter(j => !j.expired));
     }
     setLoading(false);
   }

@@ -31,7 +31,8 @@ export type Ecosystem =
   | "DAO"
   | "Protocol"
   | "Startup"
-  | "Multi-chain";
+  | "Multi-chain"
+  | "Monad";
 
 export type CompanyType =
   | "Protocol"
