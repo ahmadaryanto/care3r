@@ -39,6 +39,7 @@ function JobsContent() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [liveAdded, setLiveAdded] = useState(0);
+  const [bitgetCount, setBitgetCount] = useState(0);
 
   async function loadJobs(force = false) {
     setLoading(true);
@@ -52,6 +53,7 @@ function JobsContent() {
       setApiJobs(fetched);
       setLastUpdated(data.updated || new Date().toISOString());
       setLiveAdded(data.liveMerged || 0);
+      setBitgetCount(data.bitgetImported || 0);
     } catch (e) {
       // graceful fallback to static curated
       setApiJobs(curatedJobs.filter(j => !j.expired));
@@ -231,7 +233,9 @@ function JobsContent() {
                 </button>
               </div>
             </div>
-            <div className="text-[10px] text-zinc-500">Showing curated high-signal roles from trusted sources.</div>
+            <div className="text-[10px] text-zinc-500">
+              Curated roles + live scraped sources{bitgetCount > 0 ? ` • ${bitgetCount} Bitget roles` : ""}.
+            </div>
           </div>
 
           {loading && apiJobs.length === 0 ? (

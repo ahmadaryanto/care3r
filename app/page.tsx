@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import JobCard from "@/components/JobCard";
@@ -13,9 +13,48 @@ import type { Job } from "@/lib/types";
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [apiJobs, setApiJobs] = useState<Job[]>([]);
+  const [totalListings, setTotalListings] = useState<number | null>(null);
 
-  // Use static curated featured jobs for reliable, instant loading (no async dependency)
-  const featuredJobs = jobs.filter(j => j.featured && !j.expired).slice(0, 6);
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data) => {
+        const fetched: Job[] = Array.isArray(data.jobs) ? data.jobs : [];
+        setApiJobs(fetched);
+        if (typeof data.count === "number") setTotalListings(data.count);
+      })
+      .catch(() => {
+        /* keep static fallback */
+      });
+  }, []);
+
+  const jobPool = apiJobs.length > 0 ? apiJobs : jobs.filter((j) => !j.expired);
+
+  const showcaseJobs = useMemo(() => {
+    const featured = jobPool.filter((j) => j.featured && !j.expired);
+    const recent = jobPool
+      .filter((j) => !j.expired && !j.featured)
+      .sort(
+        (a, b) =>
+          new Date(b.date_posted).getTime() - new Date(a.date_posted).getTime()
+      );
+
+    const picked: Job[] = [];
+    for (const job of [...featured, ...recent]) {
+      if (picked.length >= 6) break;
+      if (!picked.some((p) => p.id === job.id)) picked.push(job);
+    }
+    return picked;
+  }, [jobPool]);
+
+  const newThisWeek = useMemo(() => {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return jobPool.filter((j) => {
+      const d = new Date(j.date_posted);
+      return d >= weekAgo && !j.expired;
+    }).length;
+  }, [jobPool]);
 
   const featuredDrops = curatedDrops.filter((d) => d.featured).slice(0, 3);
 
@@ -64,13 +103,9 @@ export default function Home() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1f1f24] rounded-2xl mb-16 overflow-hidden">
         {[
           { label: "Active Sources", value: sources.filter(s => s.active).length.toString() },
-          { label: "Curated Listings", value: jobs.filter(j => !j.expired).length + "+" },
+          { label: "Curated Listings", value: (totalListings ?? jobPool.length).toLocaleString() },
           { label: "Featured Drops", value: curatedDrops.filter(d => d.featured).length.toString() },
-          { label: "New This Week", value: jobs.filter(j => {
-              const d = new Date(j.date_posted);
-              const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-              return d >= weekAgo && !j.expired;
-            }).length.toString() },
+          { label: "New This Week", value: newThisWeek.toString() },
         ].map((s, i) => (
           <div key={i} className="bg-[#0a0a0f] py-4 sm:py-5 px-4 sm:px-6 text-center">
             <div className="text-2xl sm:text-3xl font-semibold tracking-tighter text-white">{s.value}</div>
@@ -90,8 +125,8 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {featuredJobs.length > 0 ? (
-            featuredJobs.map((job) => (
+          {showcaseJobs.length > 0 ? (
+            showcaseJobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))
           ) : (
