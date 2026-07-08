@@ -9,17 +9,17 @@ import { Category, Ecosystem, WorkMode, EmploymentType, Seniority } from "@/lib/
 import type { Job } from "@/lib/types";
 
 interface JobsPageClientProps {
-  initialJobs: Job[];
-  initialUpdated: string;
-  initialBitgetCount: number;
-  initialLiveMerged: number;
+  jobs: Job[];
+  lastUpdated: string;
+  bitgetCount: number;
+  liveMerged: number;
 }
 
 export default function JobsPageClient({
-  initialJobs,
-  initialUpdated,
-  initialBitgetCount,
-  initialLiveMerged,
+  jobs,
+  lastUpdated,
+  bitgetCount,
+  liveMerged,
 }: JobsPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -44,42 +44,6 @@ export default function JobsPageClient({
   const [filters, setFilters] = useState(initialFilters);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const [apiJobs, setApiJobs] = useState<Job[]>(initialJobs);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(initialUpdated);
-  const [liveAdded, setLiveAdded] = useState(initialLiveMerged);
-  const [bitgetCount, setBitgetCount] = useState(initialBitgetCount);
-
-  async function loadJobs(force = false) {
-    if (force) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const params = new URLSearchParams({ lite: "1" });
-      if (force) params.set("refresh", "1");
-      const res = await fetch(`/api/jobs?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const fetched: Job[] = Array.isArray(data.jobs) ? data.jobs : [];
-      if (fetched.length > 0) {
-        setApiJobs(fetched);
-        setLastUpdated(data.updated || new Date().toISOString());
-        setLiveAdded(data.liveMerged || 0);
-        setBitgetCount(data.bitgetImported || 0);
-      }
-    } catch {
-      /* keep server-provided jobs */
-    }
-
-    setLoading(false);
-    setRefreshing(false);
-  }
-
-  useEffect(() => {
-    loadJobs(false);
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams();
 
@@ -102,7 +66,7 @@ export default function JobsPageClient({
   }, [search, sort, filters, router]);
 
   const filteredAndSorted = useMemo(() => {
-    let result = [...apiJobs].filter((job) => !job.expired);
+    let result = [...jobs].filter((job) => !job.expired);
 
     if (search.trim()) {
       const q = search.toLowerCase().trim();
@@ -150,7 +114,7 @@ export default function JobsPageClient({
     }
 
     return result;
-  }, [search, sort, filters, apiJobs]);
+  }, [search, sort, filters, jobs]);
 
   const resetFilters = () => {
     setFilters({
@@ -180,23 +144,14 @@ export default function JobsPageClient({
           <div className="section-title">Opportunities</div>
           <h1 className="text-4xl font-semibold tracking-tight">All Jobs</h1>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-zinc-400">
-          <span>
-            {filteredAndSorted.length} of {apiJobs.length} roles
-            {bitgetCount > 0 && <span className="text-[#c9a8ff]"> • {bitgetCount} Bitget</span>}
-          </span>
+        <div className="text-sm text-zinc-400">
+          {filteredAndSorted.length} of {jobs.length} roles
+          {bitgetCount > 0 && <span className="text-[#c9a8ff]"> • {bitgetCount} Bitget</span>}
           {lastUpdated && (
-            <span className="text-xs text-zinc-500">
-              updated {new Date(lastUpdated).toLocaleTimeString()}
+            <span className="block text-xs text-zinc-500 mt-1">
+              Snapshot from {new Date(lastUpdated).toLocaleString()}
             </span>
           )}
-          <button
-            onClick={() => loadJobs(true)}
-            disabled={refreshing}
-            className="btn-secondary text-xs px-3 py-1.5 w-fit"
-          >
-            {refreshing ? "Refreshing…" : "Refresh live data"}
-          </button>
         </div>
       </div>
 
@@ -250,17 +205,13 @@ export default function JobsPageClient({
               </div>
             </div>
             <div className="text-[10px] text-zinc-500">
-              {apiJobs.length} listings loaded
-              {liveAdded > 0 ? ` • ${liveAdded} live scraped` : ""}
-              {bitgetCount > 0 ? ` • ${bitgetCount} Bitget` : ""}.
+              Static snapshot • {jobs.length} listings
+              {liveMerged > 0 ? ` • ${liveMerged} scraped` : ""}
+              {bitgetCount > 0 ? ` • ${bitgetCount} Bitget` : ""}
             </div>
           </div>
 
-          {loading && apiJobs.length === 0 ? (
-            <div className="py-12 text-center text-sm text-zinc-400 border border-[#1f1f24] rounded-3xl">
-              Loading opportunities...
-            </div>
-          ) : filteredAndSorted.length === 0 ? (
+          {filteredAndSorted.length === 0 ? (
             <div className="py-12 text-center border border-[#1f1f24] rounded-3xl">
               <div className="text-xl font-medium mb-2">No matches found</div>
               <p className="text-zinc-400 mb-4">Try broadening your filters or search terms.</p>

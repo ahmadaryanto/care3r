@@ -14,12 +14,14 @@ interface HomePageClientProps {
   initialJobs: Job[];
   totalListings: number;
   newThisWeek: number;
+  lastUpdated: string;
 }
 
 export default function HomePageClient({
   initialJobs,
   totalListings,
   newThisWeek,
+  lastUpdated,
 }: HomePageClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +81,9 @@ export default function HomePageClient({
             <Link href="/jobs" className="btn-primary px-9 py-3 text-base w-full sm:w-auto justify-center">Explore Jobs</Link>
             <Link href="/submit-source" className="btn-secondary px-6 py-3 text-base w-full sm:w-auto justify-center">Submit a Job Source</Link>
           </div>
-          <div className="text-xs text-zinc-500 mt-1">Find high-signal Web3 jobs before everyone else. Apply links are real.</div>
+          <div className="text-xs text-zinc-500 mt-1">
+            {totalListings.toLocaleString()} roles in snapshot • updated {new Date(lastUpdated).toLocaleDateString()}
+          </div>
         </div>
       </div>
 

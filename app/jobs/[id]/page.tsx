@@ -1,76 +1,28 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
-import { jobs as staticJobs } from "@/lib/mock-data";
-import { Job } from "@/lib/types";
+import { notFound } from "next/navigation";
+import { getJobById, getAllJobs } from "@/lib/jobs-feed";
 import { format } from "date-fns";
 import { ArrowLeft, ExternalLink, MapPin, Briefcase, Calendar } from "lucide-react";
 
-export default function JobDetail() {
-  const params = useParams<{ id: string }>();
-  const [job, setJob] = useState<Job | undefined>(undefined);
-  const [similar, setSimilar] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const id = params?.id;
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-
-    // Try static curated first (fast, no network)
-    let found = staticJobs.find((j) => j.id === id);
-    if (found) {
-      setJob(found);
-      const sim = staticJobs
-        .filter((j) => j.id !== id && (j.category === found!.category || j.ecosystem === found!.ecosystem))
-        .slice(0, 3);
-      setSimilar(sim);
-      setLoading(false);
-      return;
-    }
-
-    // Fallback: fetch full list (includes live scraped jobs)
-    (async () => {
-      try {
-        const res = await fetch('/api/jobs');
-        const data = await res.json();
-        const allJobs: Job[] = Array.isArray(data?.jobs) ? data.jobs : [];
-        found = allJobs.find((j) => j.id === id);
-        if (found) {
-          setJob(found);
-          const sim = allJobs
-            .filter((j) => j.id !== id && (j.category === found!.category || j.ecosystem === found!.ecosystem))
-            .slice(0, 3);
-          setSimilar(sim);
-        }
-      } catch {
-        // keep undefined -> not found UI
-      }
-      setLoading(false);
-    })();
-  }, [params?.id]);
-
-  if (loading) {
-    return (
-      <div className="max-w-3xl mx-auto px-6 py-20 text-center text-sm text-zinc-400">
-        Loading job details...
-      </div>
-    );
-  }
+export default async function JobDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const job = getJobById(id);
 
   if (!job) {
-    return (
-      <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-        <h2 className="text-2xl font-semibold">Job not found</h2>
-        <p className="mt-3 text-zinc-400">It may have been removed or the link is outdated.</p>
-        <Link href="/jobs" className="inline-block mt-8 btn-secondary">Back to jobs</Link>
-      </div>
-    );
+    notFound();
   }
+
+  const similar = getAllJobs()
+    .filter(
+      (j) =>
+        j.id !== id &&
+        (j.category === job.category || j.ecosystem === job.ecosystem)
+    )
+    .slice(0, 3);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
@@ -79,7 +31,6 @@ export default function JobDetail() {
       </Link>
 
       <div className="grid lg:grid-cols-12 gap-9">
-        {/* Main Content */}
         <div className="lg:col-span-8">
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="badge badge-accent">{job.ecosystem}</span>
@@ -120,7 +71,7 @@ export default function JobDetail() {
 
           <div className="mt-10 detail-section">
             <h3>Description</h3>
-            <p className="leading-relaxed text-[15px] text-zinc-300">{job.description}</p>
+            <p className="leading-relaxed text-[15px] text-zinc-300 whitespace-pre-line">{job.description}</p>
           </div>
 
           {job.responsibilities.length > 0 && (
@@ -181,7 +132,6 @@ export default function JobDetail() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="lg:col-span-4">
           <div className="card p-6 sticky top-20">
             <div className="space-y-4 text-sm">

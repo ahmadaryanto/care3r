@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "scrape:jobs": "tsx scripts/build-jobs-snapshot.mjs",
+    "scrape:bitget": "node scrape-bitget-full.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
