@@ -54,7 +54,7 @@ export default function CuratedDropDetail() {
       </div>
 
       <div className="mt-12 text-sm text-zinc-400">
-        These roles were hand-selected by the orpheuzkaze curators. 
+        These roles were hand-selected by the care3r curators. 
         <Link href="/jobs" className="ml-2 text-[#c9a8ff] hover:underline">Browse full directory →</Link>
       </div>
     </div>

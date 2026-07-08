@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "orpheuzkaze | Curated Web3 Jobs",
-  description: "Find high-signal Web3 jobs before everyone else. Curated opportunities across protocols, ecosystems, funds, and crypto-native teams.",
+  title: "care3r | Web3 Jobs",
+  description: "Discover remote Web3 jobs and crypto careers. Curated high-signal opportunities at protocols, funds, startups, and builder teams.",
   icons: {
     icon: "/favicon.ico",
   },

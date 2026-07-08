@@ -27,10 +27,10 @@ export default function Navbar() {
         <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#9b6dff] to-[#c9a8ff] flex items-center justify-center">
-              <span className="text-white text-lg font-semibold tracking-[-1px]">O</span>
+              <span className="text-white text-lg font-semibold tracking-[-1px]">C</span>
             </div>
             <span className="font-semibold text-xl tracking-[-0.4px] text-white group-hover:text-[#c9a8ff] transition-colors">
-              orpheuzkaze
+              care3r
             </span>
           </Link>
 

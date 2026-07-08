@@ -1,6 +1,6 @@
-# orpheuzkaze
+# care3r
 
-Curated high-signal Web3 jobs for builders, operators, and crypto-native talent.
+Remote Web3 jobs and crypto careers. Curated high-signal opportunities for builders, operators, and crypto-native talent.
 
 Not another noisy aggregator — focused discovery from the best sources across protocols, L2s, funds, infra, consumer crypto, and AI x Crypto.
 

@@ -8,7 +8,7 @@ export default function AboutPage() {
 
       <div className="mt-8 space-y-6 text-lg text-zinc-300">
         <p>
-          orpheuzkaze is a curated discovery layer for Web3 roles. We don&apos;t aggregate everything. 
+          care3r is a curated discovery layer for Web3 roles and remote crypto careers. We don&apos;t aggregate everything. 
           We focus on quality over quantity — roles at serious protocols, ambitious startups, funds, and infrastructure teams.
         </p>
         <p>

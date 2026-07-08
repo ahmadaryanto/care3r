@@ -39,7 +39,7 @@ function isRealJob(title: string): boolean {
 export async function scrapeSimpleBoard(url: string, sourceName: string): Promise<ScrapedJob[]> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0)' }
     });
     if (!res.ok) return [];
 
@@ -132,7 +132,7 @@ export async function scrapeSimpleBoard(url: string, sourceName: string): Promis
 export async function fetchCryptoJobsListRSS(): Promise<ScrapedJob[]> {
   try {
     const res = await fetch('https://api.cryptojobslist.com/rss.xml', {
-      headers: { 'User-Agent': 'Orpheuzkaze/1.0 (+https://orpheuzkaze.com)' }
+      headers: { 'User-Agent': 'care3r/1.0 (+https://care3r.com)' }
     });
     if (!res.ok) return [];
     const xml = await res.text();
@@ -173,7 +173,7 @@ export async function scrapeLeverBoard(leverSlug: string, companyFallback: strin
   try {
     const res = await fetch(url, {
       headers: { 
-        'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0; +https://orpheuzkaze.com)' 
+        'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0; +https://care3r.com)' 
       }
     });
     if (!res.ok) return [];
@@ -447,7 +447,7 @@ async function scrapeEthereumJobBoard(): Promise<ScrapedJob[]> {
 async function scrapeWeb3Career(): Promise<ScrapedJob[]> {
   const url = 'https://web3.career';
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0)' } });
     const html = await res.text();
     const $ = cheerio.load(html);
     const jobs: ScrapedJob[] = [];
@@ -520,7 +520,7 @@ async function scrapeCryptoJobsList(): Promise<ScrapedJob[]> {
 async function scrapeCryptocurrencyJobsCo(): Promise<ScrapedJob[]> {
   const url = 'https://cryptocurrencyjobs.co';
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0)' } });
     const html = await res.text();
     const $ = cheerio.load(html);
     const jobs: ScrapedJob[] = [];
@@ -789,7 +789,7 @@ export async function scrapeCryptocurrencyJobs(): Promise<ScrapedJob[]> {
   const url = 'https://cryptocurrencyjobs.co/engineering/';
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OrpheuzkazeBot/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0)' }
     });
     if (!res.ok) return [];
     const html = await res.text();

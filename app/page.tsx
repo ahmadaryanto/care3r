@@ -124,7 +124,7 @@ export default function Home() {
       {/* VALUE PROPS / POSITIONING */}
       <div className="border border-[#1f1f24] rounded-3xl px-8 py-12 mb-20 bg-[#111114]">
         <div className="max-w-2xl">
-          <div className="text-[#c9a8ff] text-sm tracking-[1px] mb-3">WHY ORPHEUZKAZE</div>
+          <div className="text-[#c9a8ff] text-sm tracking-[1px] mb-3">WHY CARE3R</div>
           <h3 className="text-3xl font-semibold tracking-tight">Not another job board.</h3>
           <p className="mt-3 text-lg text-zinc-400">
             We manually curate and organize opportunities from the best sources across crypto. 

@@ -7,11 +7,11 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#9b6dff] to-[#c9a8ff] flex items-center justify-center">
-              <span className="text-white text-xs font-semibold">O</span>
+              <span className="text-white text-xs font-semibold">C</span>
             </div>
             <div>
-              <div className="font-semibold tracking-tight">orpheuzkaze</div>
-              <div className="text-xs text-zinc-500">High-signal Web3 jobs</div>
+              <div className="font-semibold tracking-tight">care3r</div>
+              <div className="text-xs text-zinc-500">Remote Web3 jobs</div>
             </div>
           </div>
 
@@ -24,7 +24,7 @@ export default function Footer() {
           </div>
 
           <div className="text-xs text-zinc-500">
-            © {new Date().getFullYear()} orpheuzkaze. Curated discovery.
+            © {new Date().getFullYear()} care3r. Remote Web3 careers.
           </div>
         </div>
 
