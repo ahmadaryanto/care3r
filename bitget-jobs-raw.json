@@ -1,0 +1,99 @@
+{
+  "scrapedAt": "2026-07-08T08:53:42.662Z",
+  "source": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/",
+  "company": "Bitget",
+  "apiCalls": [
+    {
+      "url": "https://hire-r1.mokahr.com/api/env",
+      "status": 200,
+      "preview": "{\"code\":0,\"msg\":\"success\",\"data\":{\"CLUSTER\":\"prod-aws-sg\",\"NODE_ENV\":\"production\",\"PUBLIC_DOMAIN\":\"https://hire-r1-public.mokahr.com\",\"CDN_DOMAIN\":\"https://hire-r1-ats.mokahr.com\",\"PASSPORT_HOST\":\"https://hire-r1-passport.mokahr.com\",\"SOCKET_HOST\":\"https://hire-r1-socket.mokahr.com\",\"BI_REPORTS_HOST\":\"https://hire-r1-olap.mokahr.com\",\"MAIN_HOST\":\"https://hire-r1.mokahr.com\",\"PEOPLE_HOST\":\"https://core.mokahr.com\",\"IS_OVERSEAS\":\"1\",\"IS_DINGTALK\":false,\"LANGUAGE_PACK\":\"\"}}"
+    },
+    {
+      "url": "https://hire-r1.mokahr.com/api/outer/ats-apply/privacy-policy/get",
+      "status": 200,
+      "preview": "{\"code\":0,\"codeType\":0,\"data\":[],\"msg\":\"success\",\"success\":true}"
+    },
+    {
+      "url": "https://hire-r1.mokahr.com/api/outer/ats-apply/website/group-by-job",
+      "status": 200,
+      "preview": "{\"code\":0,\"codeType\":0,\"data\":{\"jobsGroupedByCity\":[{\"id\":\"Austria\",\"jobCount\":1,\"label\":\"Austria\",\"locationRows\":[{\"id\":100016986}]},{\"id\":\"Malaysia\",\"jobCount\":1,\"label\":\"Malaysia\",\"locationRows\":[{\"id\":100000313}]},{\"id\":\"Others\",\"jobCount\":186,\"label\":\"Others\",\"locationRows\":[]}],\"jobsGroupedByProvince\":[{\"id\":\"Austria\",\"jobCount\":1,\"label\":\"Austria\",\"locationRows\":[{\"id\":100016986}]},{\"id\":\"Malaysia\",\"jobCount\":1,\"label\":\"Malaysia\",\"locationRows\":[{\"id\":100000313}]},{\"id\":\"Others\",\"jobCount\":186,\"label\":\"Others\",\"locationRows\":[]}]},\"msg\":\"success\",\"success\":true}"
+    },
+    {
+      "url": "https://hire-r1.mokahr.com/api/extension-server/extension/list-by-org?orgId=bitget",
+      "status": 200,
+      "preview": "{\"code\":0,\"data\":{\"extensions\":[]}}"
+    },
+    {
+      "url": "https://sentry-sg.mokahr.com/api/37/envelope/?sentry_key=0daf4494b3c8484b0ef4d32a3d6c44b6&sentry_version=7",
+      "status": 200,
+      "preview": "{}"
+    },
+    {
+      "url": "https://hire-r1.mokahr.com/api/outer/ats-apply/website/jobs/module",
+      "status": 200,
+      "preview": "{\"code\":0,\"codeType\":0,\"data\":{\"jobStats\":{\"orgId\":\"bitget\",\"total\":188},\"jobs\":[{\"attributeId\":100004028,\"deptId\":100003015,\"hireMode\":1,\"id\":\"ffc51501-8d46-45d0-9a95-3e0f2cff8b53\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"Futures User Operations 合约专业用户运营\"},{\"attributeId\":100004028,\"deptId\":100003015,\"hireMode\":1,\"id\":\"1344ebf1-6317-4c96-a170-556c7daf551e\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"Financial Risk Control Product Manager 金融风控产品（专家）\"},{\"attributeId\":100004028,\"deptId\":100003015,\"hireMode\":1,\"id\":\"4013cc17-c5ea-422e-876c-29dea6ae499d\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"Financial Product Manager  金融产品经理（专家）\"},{\"attributeId\":100004028,\"deptId\":100003017,\"hireMode\":1,\"id\":\"1b41afce-2d7a-4751-87ac-0e55b03f208b\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"P2P Risk & Control Specialist P2P风控\"},{\"attributeId\":100004028,\"deptId\":100003129,\"hireMode\":1,\"id\":\"fcea5d03-ce11-4ad0-ab26-8d2af6e8b3be\",\"locations\":[],\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"Operations Manager - LATAM\"},{\"attributeId\":100004028,\"deptId\":100033388,\"hireMode\":1,\"id\":\"36681792-5b93-4709-922b-de03dd189307\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"量化开发工程师-高频交易系统方向\"},{\"attributeId\":100004028,\"deptId\":100003016,\"hireMode\":1,\"id\":\"950a6199-50c2-4f1d-a519-e0e6d1be9ace\",\"locations\":[],\"multiLocale\":\"{\\\"mainLocale\\\":\\\"en-US\\\",\\\"secondLocale\\\":\\\"\\\"}\",\"orgId\":\"bitget\",\"prior\":1,\"status\":\"open\",\"title\":\"Marketing Manager- APAC\"},{\"attributeId\":100004028,\"deptId\":100003088,\"hireMode\":1,\"id\":\"e28d3e20-d72a-46b8-adeb-ca64cddb2529\",\"locations\":["
+    }
+  ],
+  "jobs": [
+    {
+      "title": "Product & Design",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100004123"
+    },
+    {
+      "title": "Operations",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100004124"
+    },
+    {
+      "title": "Business Development",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100002268"
+    },
+    {
+      "title": "Branding",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100002269"
+    },
+    {
+      "title": "Marketing",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100002270"
+    },
+    {
+      "title": "Technical Development",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100004125"
+    },
+    {
+      "title": "Legal & Compliance",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100004127"
+    },
+    {
+      "title": "Translator",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100002272"
+    },
+    {
+      "title": "Corporate Function",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100002273"
+    },
+    {
+      "title": "Customer Service",
+      "location": "",
+      "department": "",
+      "applyUrl": "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079#/jobs?zhineng%5B0%5D=100004128"
+    }
+  ]
+}
