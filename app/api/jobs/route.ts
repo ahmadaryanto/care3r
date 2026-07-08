@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { jobs as curatedJobs, getLocationTag } from '@/lib/mock-data';
+import { getBitgetJobs, BITGET_JOBS_COUNT, BITGET_SCRAPED_AT } from '@/lib/bitget-jobs';
 import { fetchLiveJobs, ScrapedJob } from '@/lib/scrapers';
 import type { Job, Ecosystem, WorkMode, EmploymentType, Seniority, Category, CompanyType } from '@/lib/types';
 
@@ -102,8 +103,11 @@ export async function GET(request: Request) {
   const curatedOnly = searchParams.get('curatedOnly') === '1' || searchParams.get('curatedOnly') === 'true';
   const forceRefresh = searchParams.get('refresh') === '1' || searchParams.get('refresh') === 'true';
 
-  // Base curated list
+  // Base curated list + imported Bitget roles (static snapshot)
+  const bitgetJobs = getBitgetJobs();
   let result: Job[] = curatedJobs.filter(j => !j.expired);
+  const bitgetFresh = dedupeByTitleCompany(result, bitgetJobs);
+  result = [...bitgetFresh, ...result];
 
   if (featuredOnly) {
     result = result.filter(j => j.featured);
@@ -150,13 +154,15 @@ export async function GET(request: Request) {
     count: result.length,
     updated: refreshedAt,
     liveMerged: liveAdded,
+    bitgetImported: BITGET_JOBS_COUNT,
+    bitgetScrapedAt: BITGET_SCRAPED_AT,
     cached: usedCache,
     note: curatedOnly 
       ? "Pure curated snapshot (curatedOnly=1)."
       : featuredOnly
         ? "Featured curated roles only."
-        : "Live-enriched from your sources: jobs.solana.com, jobs.avax.network, eco-jobs.monad.xyz, ethereumjobboard.com, web3.career, cryptojobslist, cryptocurrencyjobs.co, midnight.network, dragonfly, block.xyz, crypto-careers, beincrypto, jobstash, remote3.co",
-    sources: ["curated", "solana", "avax", "monad-eco", "ethereumjobboard", "web3.career", "cryptojobslist", "cryptocurrencyjobs", "midnight", "dragonfly", "block", "crypto-careers", "beincrypto", "jobstash", "remote3", "perle-rippling"],
+        : "Live-enriched from your sources plus 188 imported Bitget roles (mokahr.com/bitget). Sources: jobs.solana.com, jobs.avax.network, eco-jobs.monad.xyz, ethereumjobboard.com, web3.career, cryptojobslist, cryptocurrencyjobs.co, midnight.network, dragonfly, block.xyz, crypto-careers, beincrypto, jobstash, remote3.co",
+    sources: ["curated", "bitget", "solana", "avax", "monad-eco", "ethereumjobboard", "web3.career", "cryptojobslist", "cryptocurrencyjobs", "midnight", "dragonfly", "block", "crypto-careers", "beincrypto", "jobstash", "remote3", "perle-rippling"],
     jobs: result,
   });
 }

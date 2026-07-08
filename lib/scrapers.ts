@@ -849,6 +849,65 @@ export async function scrapeCryptocurrencyJobs(): Promise<ScrapedJob[]> {
   }
 }
 
+const BITGET_MOKAHR_BASE = 'https://hire-r1.mokahr.com';
+const BITGET_BOARD_URL = `${BITGET_MOKAHR_BASE}/social-recruitment/bitget/100000079`;
+const BITGET_ORG_ID = 'bitget';
+const BITGET_SITE_ID = '100000079';
+
+async function mokaPost(path: string, body: Record<string, unknown>) {
+  const res = await fetch(`${BITGET_MOKAHR_BASE}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; care3rBot/1.0)',
+      Origin: BITGET_MOKAHR_BASE,
+      Referer: BITGET_BOARD_URL,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`MokaHR HTTP ${res.status}`);
+  const json = await res.json();
+  if (!json.success && json.code !== 0) throw new Error(json.msg || 'MokaHR API error');
+  return json.data;
+}
+
+/** Scrape all open Bitget roles from MokaHR (typically ~188 jobs). */
+export async function scrapeBitgetMokahr(): Promise<ScrapedJob[]> {
+  const summaries: Array<{ id: string; title: string; status?: string }> = [];
+  const seen = new Set<string>();
+
+  for (let offset = 0; offset < 500; offset += 50) {
+    const data = await mokaPost('/api/outer/ats-apply/website/jobs/module', {
+      orgId: BITGET_ORG_ID,
+      siteId: BITGET_SITE_ID,
+      offset,
+      limit: 50,
+    });
+    const batch = data.jobs || [];
+    for (const job of batch) {
+      if (!seen.has(job.id)) {
+        seen.add(job.id);
+        summaries.push(job);
+      }
+    }
+    if (batch.length < 50) break;
+  }
+
+  const jobs: ScrapedJob[] = [];
+  for (const summary of summaries) {
+    if (summary.status && summary.status !== 'open') continue;
+    jobs.push({
+      title: summary.title,
+      company: 'Bitget',
+      location: 'Remote',
+      applyUrl: `${BITGET_BOARD_URL}#/job/${summary.id}`,
+      source: 'mokahr.com/bitget',
+    });
+  }
+
+  return jobs;
+}
+
 export const SCRAPING_NOTES = `
 Most pages are dynamic. 
 Current strategy: High-signal manual curation of real opportunities from the listed sources + live enrichment on local via Lever + other boards.

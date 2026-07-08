@@ -2140,6 +2140,17 @@ export const sources: Source[] = [
     last_checked: "2026-07-06",
     indexed_jobs_count: 27,
     active: true
+  },
+  {
+    id: "s18",
+    name: "Bitget Careers",
+    url: "https://hire-r1.mokahr.com/social-recruitment/bitget/100000079",
+    description: "188 open roles at Bitget — one of the world's largest crypto exchanges. Product, engineering, BD, operations, legal, marketing and more (MokaHR).",
+    ecosystem: "Multi-chain",
+    category: "Exchange",
+    last_checked: "2026-07-08",
+    indexed_jobs_count: 188,
+    active: true
   }
 ];
 
