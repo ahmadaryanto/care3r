@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import React from "react";
 import SourceCard from "@/components/SourceCard";
 import { sources } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "Job Sources We Track | care3r",
+  description:
+    "The trusted primary sources care3r monitors for Web3 and crypto job openings.",
+  alternates: { canonical: "/sources" },
+};
 
 export default function SourcesPage() {
   const activeSources = sources.filter((s) => s.active);

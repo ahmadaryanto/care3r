@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import NewsletterForm from "@/components/NewsletterForm";
+
+export const metadata: Metadata = {
+  title: "Join care3r Drops: Web3 Jobs Newsletter | care3r",
+  description:
+    "Get the best Web3 jobs in your inbox before the timeline finds them.",
+  alternates: { canonical: "/newsletter" },
+};
 
 export default function NewsletterPage() {
   return (

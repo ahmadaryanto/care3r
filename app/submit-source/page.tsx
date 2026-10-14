@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import SubmitSourceForm from "@/components/SubmitSourceForm";
+
+export const metadata: Metadata = {
+  title: "Submit a Job Source | care3r",
+  description:
+    "Know a high-signal Web3 jobs board or careers page? Suggest it for care3r to track.",
+  alternates: { canonical: "/submit-source" },
+};
 
 export default function SubmitSourcePage() {
   return (

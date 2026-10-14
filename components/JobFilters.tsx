@@ -40,7 +40,7 @@ export default function JobFilters({ filters, onChange, sort, onSortChange, onRe
   const toggle = <T extends string>(arr: T[], value: T): T[] =>
     arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
 
-  const update = (key: keyof FilterState, value: any) => {
+  const update = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     onChange({ ...filters, [key]: value });
   };
 

@@ -17,12 +17,12 @@ export default function JobCard({ job, compact = false }: JobCardProps) {
   return (
     <div className="job-card p-5 sm:p-6 flex flex-col h-full group">
       <Link href={`/jobs/${job.id}`} className="block flex-1">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <h3 className="font-semibold text-[17px] leading-tight tracking-[-0.2px] group-hover:text-[#c9a8ff] transition-colors">
+        <div className="flex items-start justify-between gap-3 mb-3 min-w-0">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[17px] leading-tight break-words [overflow-wrap:anywhere] tracking-[-0.02em] transition-colors duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:text-[#c9a8ff]">
               {job.title}
             </h3>
-            <div className="mt-1.5 flex items-center gap-2 text-sm">
+            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm">
               <span className="font-medium text-zinc-100">{job.company}</span>
               <span className="text-zinc-500">·</span>
               <span className="text-zinc-400">{job.ecosystem}</span>
@@ -63,7 +63,7 @@ export default function JobCard({ job, compact = false }: JobCardProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <Clock size={13} />
-            <span>{postedAgo}</span>
+            <span suppressHydrationWarning>{postedAgo}</span>
           </div>
         </div>
 
