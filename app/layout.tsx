@@ -17,13 +17,30 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE = "https://care3r.vercel.app";
+const DESCRIPTION =
+  "Curated remote Web3 jobs and crypto careers for builders, operators, and crypto-native talent. High-signal roles at protocols, funds, and startups, plus a free CV Power Score.";
+
 export const metadata: Metadata = {
-  title: "care3r | Web3 Jobs",
-  description: "Discover remote Web3 jobs and crypto careers. Curated high-signal opportunities at protocols, funds, startups, and builder teams.",
-  icons: {
-    icon: "/favicon.ico",
+  metadataBase: new URL(SITE),
+  title: { default: "care3r | Curated Web3 Jobs", template: "%s" },
+  description: DESCRIPTION,
+  applicationName: "care3r",
+  keywords: ["web3 jobs", "crypto jobs", "remote crypto careers", "blockchain jobs", "defi jobs", "CV score"],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "care3r",
+    url: SITE,
+    title: "care3r | Curated Web3 Jobs",
+    description: DESCRIPTION,
+    locale: "en_US",
   },
+  twitter: { card: "summary_large_image", title: "care3r | Curated Web3 Jobs", description: DESCRIPTION },
+  icons: { icon: "/favicon.ico" },
 };
+
+export const viewport = { themeColor: "#050308" };
 
 export default function RootLayout({
   children,
@@ -35,8 +52,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-[#0a0a0f] text-zinc-200">
-        {/* Early suppression for noisy wallet extension errors (e.g. TronLink) */}
+      <body className="flex min-h-dvh flex-col bg-[#050308] text-zinc-200">
         <Script
           id="suppress-wallet-injection-errors"
           strategy="beforeInteractive"
@@ -52,8 +68,6 @@ export default function RootLayout({
                            m.indexOf('set on proxy') !== -1 ||
                            m.indexOf('trap returned falsish') !== -1;
                   }
-
-                  // Capture very early
                   var add = EventTarget.prototype.addEventListener;
                   add.call(window, 'unhandledrejection', function(e) {
                     var r = e && e.reason;
@@ -62,7 +76,6 @@ export default function RootLayout({
                       try { e.preventDefault && e.preventDefault(); } catch(_) {}
                     }
                   }, true);
-
                   add.call(window, 'error', function(e) {
                     if (isWalletNoise(e && e.message)) {
                       try { e.preventDefault && e.preventDefault(); } catch(_) {}

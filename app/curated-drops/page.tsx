@@ -1,8 +1,14 @@
-"use client";
-
+import type { Metadata } from "next";
 import React from "react";
 import CuratedDropCard from "@/components/CuratedDropCard";
 import { curatedDrops } from "@/lib/mock-data";
+
+export const metadata: Metadata = {
+  title: "Curated Drops: Hand-picked Web3 Job Collections | care3r",
+  description:
+    "Editorial collections of the best Web3 roles, grouped by theme, ecosystem, and function.",
+  alternates: { canonical: "/curated-drops" },
+};
 
 export default function CuratedDropsPage() {
   const featured = curatedDrops.filter((d) => d.featured);
@@ -22,7 +28,7 @@ export default function CuratedDropsPage() {
       {featured.length > 0 && (
         <div className="mb-10">
           <div className="text-sm uppercase tracking-widest text-zinc-500 mb-4">Featured collections</div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {featured.map((drop) => (
               <CuratedDropCard key={drop.id} drop={drop} />
             ))}
@@ -32,7 +38,7 @@ export default function CuratedDropsPage() {
 
       <div>
         <div className="text-sm uppercase tracking-widest text-zinc-500 mb-4">More collections</div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {rest.map((drop) => (
             <CuratedDropCard key={drop.id} drop={drop} />
           ))}

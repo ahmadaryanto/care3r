@@ -15,6 +15,8 @@ interface HomePageClientProps {
   totalListings: number;
   newThisWeek: number;
   lastUpdated: string;
+  /** Server-rendered section shown between Curated Drops and "Why care3r". */
+  talentSection?: React.ReactNode;
 }
 
 export default function HomePageClient({
@@ -22,6 +24,7 @@ export default function HomePageClient({
   totalListings,
   newThisWeek,
   lastUpdated,
+  talentSection,
 }: HomePageClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,8 +84,8 @@ export default function HomePageClient({
             <Link href="/jobs" className="btn-primary px-9 py-3 text-base w-full sm:w-auto justify-center">Explore Jobs</Link>
             <Link href="/submit-source" className="btn-secondary px-6 py-3 text-base w-full sm:w-auto justify-center">Submit a Job Source</Link>
           </div>
-          <div className="text-xs text-zinc-500 mt-1">
-            {totalListings.toLocaleString()} roles in snapshot • updated {new Date(lastUpdated).toLocaleDateString()}
+          <div className="text-xs text-zinc-400 mt-1">
+            {totalListings.toLocaleString("en-US")} roles in snapshot • updated {new Date(lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
           </div>
         </div>
       </div>
@@ -90,7 +93,7 @@ export default function HomePageClient({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1f1f24] rounded-2xl mb-16 overflow-hidden">
         {[
           { label: "Active Sources", value: sources.filter((s) => s.active).length.toString() },
-          { label: "Curated Listings", value: totalListings.toLocaleString() },
+          { label: "Curated Listings", value: totalListings.toLocaleString("en-US") },
           { label: "Featured Drops", value: curatedDrops.filter((d) => d.featured).length.toString() },
           { label: "New This Week", value: newThisWeek.toString() },
         ].map((s, i) => (
@@ -138,6 +141,8 @@ export default function HomePageClient({
           ))}
         </div>
       </div>
+
+      {talentSection}
 
       <div className="border border-[#1f1f24] rounded-3xl px-8 py-12 mb-20 bg-[#111114]">
         <div className="max-w-2xl">

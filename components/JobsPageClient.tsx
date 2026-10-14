@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import JobCard from "@/components/JobCard";
 import JobFilters from "@/components/JobFilters";
 import SearchBar from "@/components/SearchBar";
@@ -13,16 +12,20 @@ interface JobsPageClientProps {
   lastUpdated: string;
   bitgetCount: number;
   liveMerged: number;
+  /** URL query params, read on the server. */
+  initialParams: Record<string, string>;
 }
+
+const PAGE_SIZE = 24;
 
 export default function JobsPageClient({
   jobs,
   lastUpdated,
   bitgetCount,
   liveMerged,
+  initialParams,
 }: JobsPageClientProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const searchParams = { get: (k: string) => initialParams[k] || null };
 
   const parseArray = <T extends string>(param: string | null): T[] =>
     param ? (param.split(",").filter(Boolean) as T[]) : [];
@@ -60,10 +63,13 @@ export default function JobsPageClient({
     setIfAny("seniorities", filters.seniorities);
     setIfAny("companyTypes", filters.companyTypes);
 
+    // Shareable URLs without a server round-trip per keystroke.
     const qs = params.toString();
     const newUrl = qs ? `/jobs?${qs}` : "/jobs";
-    router.replace(newUrl, { scroll: false });
-  }, [search, sort, filters, router]);
+    if (newUrl !== window.location.pathname + window.location.search) {
+      window.history.replaceState(window.history.state, "", newUrl);
+    }
+  }, [search, sort, filters]);
 
   const filteredAndSorted = useMemo(() => {
     let result = [...jobs].filter((job) => !job.expired);
@@ -116,6 +122,12 @@ export default function JobsPageClient({
     return result;
   }, [search, sort, filters, jobs]);
 
+  // Paginate: render PAGE_SIZE cards at a time; reset when the result set changes.
+  const resultKey = JSON.stringify([search, sort, filters]);
+  const [page, setPage] = useState({ key: resultKey, limit: PAGE_SIZE });
+  const limit = page.key === resultKey ? page.limit : PAGE_SIZE;
+  const visible = filteredAndSorted.slice(0, limit);
+
   const resetFilters = () => {
     setFilters({
       categories: [],
@@ -149,7 +161,7 @@ export default function JobsPageClient({
           {bitgetCount > 0 && <span className="text-[#c9a8ff]"> • {bitgetCount} Bitget</span>}
           {lastUpdated && (
             <span className="block text-xs text-zinc-500 mt-1">
-              Snapshot from {new Date(lastUpdated).toLocaleString()}
+              Snapshot from {new Date(lastUpdated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
             </span>
           )}
         </div>
@@ -191,6 +203,7 @@ export default function JobsPageClient({
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <select
+                  aria-label="Sort jobs"
                   value={sort}
                   onChange={(e) => setSort(e.target.value as "recent" | "oldest" | "title")}
                   className="input text-xs py-2 w-full sm:w-auto"
@@ -218,11 +231,28 @@ export default function JobsPageClient({
               <button onClick={resetFilters} className="btn-secondary">Clear filters</button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {filteredAndSorted.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
+            <>
+              <h2 className="sr-only">Job listings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {visible.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+              {visible.length < filteredAndSorted.length && (
+                <div className="mt-8 flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage({ key: resultKey, limit: limit + PAGE_SIZE })}
+                    className="btn-secondary px-8 py-2.5 text-sm"
+                  >
+                    Show more roles
+                  </button>
+                  <span className="text-xs text-zinc-400">
+                    Showing {visible.length} of {filteredAndSorted.length}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

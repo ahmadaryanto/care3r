@@ -25,6 +25,10 @@ interface JobsFeedFile {
 
 const feed = jobsFeedData as JobsFeedFile;
 
+// Guard against scraper artefacts (e.g. CSS captured as a job title).
+const looksLikeJunk = (j: Job) => /[{};]|\.css-|:not\(/.test(j.title) || j.title.length > 140;
+const isListed = (j: Job) => !j.expired && !looksLikeJunk(j);
+
 function slimJob(job: Job): Job {
   return {
     ...job,
@@ -39,7 +43,7 @@ function slimJob(job: Job): Job {
 export function getJobsFeed(options: JobsFeedOptions = {}): JobsFeedResult {
   const { featuredOnly = false, slim = false } = options;
 
-  let jobs = (feed.jobs || []).filter((j) => !j.expired);
+  let jobs = (feed.jobs || []).filter(isListed);
 
   if (featuredOnly) {
     jobs = jobs.filter((j) => j.featured).slice(0, 8);
@@ -60,11 +64,11 @@ export function getJobsFeed(options: JobsFeedOptions = {}): JobsFeedResult {
 }
 
 export function getJobById(id: string): Job | undefined {
-  return feed.jobs.find((j) => j.id === id && !j.expired);
+  return feed.jobs.find((j) => j.id === id && isListed(j));
 }
 
 export function getAllJobs(): Job[] {
-  return feed.jobs.filter((j) => !j.expired);
+  return feed.jobs.filter(isListed);
 }
 
 export const JOBS_FEED_META = {

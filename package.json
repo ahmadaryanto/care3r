@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "scrape:jobs": "tsx scripts/build-jobs-snapshot.mjs",
-    "scrape:bitget": "node scrape-bitget-full.mjs"
+    "scrape:bitget": "node scripts/scrape-bitget.mjs"
   },
   "dependencies": {
+    "@upstash/redis": "^1.39.0",
     "cheerio": "^1.2.0",
     "date-fns": "^4.4.0",
     "framer-motion": "^12.42.2",

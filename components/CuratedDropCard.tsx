@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { CuratedDrop, Job } from "@/lib/types";
+import { CuratedDrop } from "@/lib/types";
 import { getJobsByIds } from "@/lib/mock-data";
 import { Calendar } from "lucide-react";
 
@@ -13,7 +13,7 @@ export default function CuratedDropCard({ drop }: CuratedDropCardProps) {
 
   return (
     <Link href={`/curated-drops/${drop.slug}`} className="block group">
-      <div className="card p-7 h-full flex flex-col hover:border-[#9b6dff]">
+      <div className="card p-5 sm:p-7 h-full min-w-0 flex flex-col hover:border-[#9b6dff]">
         <div>
           <div className="flex items-center gap-2 mb-3">
             {drop.featured && (
@@ -21,7 +21,7 @@ export default function CuratedDropCard({ drop }: CuratedDropCardProps) {
             )}
             <span className="badge text-[10px]">{drop.job_ids.length} roles</span>
           </div>
-          <h3 className="text-xl font-semibold tracking-tight group-hover:text-[#c9a8ff] transition-colors">
+          <h3 className="text-xl font-semibold tracking-tight break-words group-hover:text-[#c9a8ff] transition-colors">
             {drop.title}
           </h3>
           <p className="mt-3 text-sm text-zinc-400 leading-relaxed line-clamp-2">

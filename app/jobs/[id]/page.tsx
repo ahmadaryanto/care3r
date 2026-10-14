@@ -3,12 +3,50 @@ import { notFound } from "next/navigation";
 import { getJobById, getAllJobs } from "@/lib/jobs-feed";
 import { format } from "date-fns";
 import { ArrowLeft, ExternalLink, MapPin, Briefcase, Calendar } from "lucide-react";
+import type { Metadata } from "next";
+import type { Job } from "@/lib/types";
+import { SITE_URL } from "@/lib/site";
 
-export default async function JobDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+type Props = { params: Promise<{ id: string }> };
+
+// Scraped listings often carry a placeholder blurb instead of the real posting.
+function hasRealDescription(job: Job) {
+  const d = (job.description || "").trim();
+  return d.length >= 300 && !/^Opportunity from /i.test(d);
+}
+
+function summary(job: Job) {
+  if (hasRealDescription(job)) return job.description.replace(/\s+/g, " ").slice(0, 155);
+  return `${job.seniority} ${job.employment_type.toLowerCase()} role at ${job.company} (${job.location}). Curated by care3r from ${job.source}.`;
+}
+
+const EMPLOYMENT: Record<string, string> = {
+  "Full-time": "FULL_TIME",
+  "Part-time": "PART_TIME",
+  Contract: "CONTRACTOR",
+  Internship: "INTERN",
+  Freelance: "CONTRACTOR",
+};
+
+// Prebuild every job page.
+export function generateStaticParams() {
+  return getAllJobs().map((j) => ({ id: j.id }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const job = getJobById(id);
+  if (!job) return { title: "Job not found | care3r" };
+  const title = `${job.title} at ${job.company} | care3r`;
+  return {
+    title,
+    description: summary(job),
+    alternates: { canonical: `/jobs/${job.id}` },
+    openGraph: { title, description: summary(job), type: "article" },
+  };
+}
+
+export default async function JobDetailPage({ params }: Props) {
   const { id } = await params;
   const job = getJobById(id);
 
@@ -24,13 +62,38 @@ export default async function JobDetailPage({
     )
     .slice(0, 3);
 
+  // JobPosting structured data only for listings with a real description (Google job-posting policy).
+  const jsonLd = hasRealDescription(job)
+    ? {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        title: job.title,
+        description: job.description,
+        datePosted: job.date_posted,
+        validThrough: new Date(new Date(job.date_posted).getTime() + 60 * 864e5).toISOString().slice(0, 10),
+        employmentType: EMPLOYMENT[job.employment_type],
+        hiringOrganization: { "@type": "Organization", name: job.company },
+        ...(job.remote
+          ? { jobLocationType: "TELECOMMUTE", applicantLocationRequirements: { "@type": "Country", name: "Worldwide" } }
+          : { jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: job.location } } }),
+        url: `${SITE_URL}/jobs/${job.id}`,
+        directApply: false,
+      }
+    : null;
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+      )}
       <Link href="/jobs" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white mb-6">
         <ArrowLeft size={16} /> Back to all jobs
       </Link>
 
-      <div className="grid lg:grid-cols-12 gap-9">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-9">
         <div className="lg:col-span-8">
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="badge badge-accent">{job.ecosystem}</span>

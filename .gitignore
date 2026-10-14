@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local talent dev store (production uses Upstash Redis)
+/data/talent-*.json

@@ -333,7 +333,7 @@ export async function scrapeGetroBoard(url: string, sourceName: string, maxResul
 
       $(selectors.join(', ')).each((_, el) => {
         const $el = $(el);
-        let href = $el.attr('href') || '';
+        const href = $el.attr('href') || '';
         let title = $el.text().trim().replace(/\s+/g, ' ');
 
         // Only accept real individual job postings (must have /jobs/<id>-slug pattern)
@@ -355,7 +355,7 @@ export async function scrapeGetroBoard(url: string, sourceName: string, maxResul
 
         // === Smart title / company split ===
         // Container text is usually: "Full TitleCompanyNameLocation: CityPosted: ..."
-        let fullText = container.text().replace(/\s+/g, ' ').trim();
+        const fullText = container.text().replace(/\s+/g, ' ').trim();
 
         // Remove the title we already have from the front
         let rest = fullText.replace(title, '').trim();
@@ -658,7 +658,7 @@ async function scrapeYZITalent(): Promise<ScrapedJob[]> {
    HEADLESS SCRAPER (for JS-heavy boards like jobs.solana.com)
    ============================================================ */
 
-let playwright: any = null;
+let playwright: typeof import('playwright') | null = null;
 
 async function getPlaywright() {
   if (playwright) return playwright;
@@ -710,8 +710,8 @@ export async function scrapeGetroBoardHeadless(
       await page.evaluate(() => window.scrollBy(0, 2000));
       await page.waitForTimeout(650); // give the board time to load more
 
-      const currentLinks = await page.$$eval('a[href*="/jobs/"]', (els: any[]) =>
-        els.map((e: any) => (e as any).href)
+      const currentLinks = await page.$$eval('a[href*="/jobs/"]', (els: Element[]) =>
+        els.map((e) => (e as HTMLAnchorElement).href)
       );
 
       if (currentLinks.length === previousCount) {
@@ -724,13 +724,13 @@ export async function scrapeGetroBoardHeadless(
     }
 
     // Extract from the final DOM state
-    const items = await page.$$eval('a[href*="/jobs/"]', (anchors: any[]) => {
-      return anchors.map(a => {
+    const items = await page.$$eval('a[href*="/jobs/"]', (anchors: Element[]) => {
+      return (anchors as HTMLAnchorElement[]).map(a => {
         const href = a.href || a.getAttribute('href') || '';
         let title = (a.textContent || '').trim().replace(/\s+/g, ' ');
 
         // Walk up to find better title / company context
-        let container: any = a.parentElement;
+        let container: Element | null = a.parentElement;
         for (let depth = 0; depth < 4 && container; depth++) {
           const t = container.querySelector('h1,h2,h3,h4,[class*="title"]');
           if (t && t.textContent) {
@@ -759,7 +759,7 @@ export async function scrapeGetroBoardHeadless(
       if (!item.title || item.title.length < 6 || !isRealJob(item.title)) continue;
 
       const fullUrl = item.href.startsWith('http') ? item.href : new URL(item.href, url).toString();
-      let company = (item.company || sourceName).trim().slice(0, 50);
+      const company = (item.company || sourceName).trim().slice(0, 50);
 
       const key = (item.title + '|' + company).toLowerCase().slice(0, 45);
       if (seen.has(key)) continue;
