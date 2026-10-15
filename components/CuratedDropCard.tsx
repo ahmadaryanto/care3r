@@ -1,52 +1,67 @@
 import React from "react";
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { CuratedDrop } from "@/lib/types";
 import { getJobsByIds } from "@/lib/mock-data";
-import { Calendar } from "lucide-react";
+import CompanyLogo from "@/components/CompanyLogo";
 
 interface CuratedDropCardProps {
   drop: CuratedDrop;
+  index?: number;
 }
 
-export default function CuratedDropCard({ drop }: CuratedDropCardProps) {
-  const jobs = getJobsByIds(drop.job_ids).slice(0, 3);
+export default function CuratedDropCard({ drop, index = 0 }: CuratedDropCardProps) {
+  const jobs = getJobsByIds(drop.job_ids);
+  const companies = [...new Set(jobs.map((j) => j.company))];
+  const published = new Date(drop.date_published).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
   return (
-    <Link href={`/curated-drops/${drop.slug}`} className="block group">
-      <div className="card p-5 sm:p-7 h-full min-w-0 flex flex-col hover:border-[#9b6dff]">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            {drop.featured && (
-              <span className="badge badge-accent text-[10px]">Featured Drop</span>
-            )}
-            <span className="badge text-[10px]">{drop.job_ids.length} roles</span>
+    <Link
+      href={`/curated-drops/${drop.slug}`}
+      className="card group rise-in relative flex h-full min-w-0 flex-col overflow-hidden p-0"
+      style={{ "--i": index, padding: 0 } as React.CSSProperties}
+    >
+      <div className="relative border-b border-white/[0.06] bg-gradient-to-br from-[#9b6dff]/[0.12] via-transparent to-[#e8a04a]/[0.05] p-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {drop.featured && <span className="badge badge-accent text-[10px]">Featured</span>}
+            <span className="badge text-[10px] text-zinc-300">{drop.job_ids.length} roles</span>
           </div>
-          <h3 className="text-xl font-semibold tracking-tight break-words group-hover:text-[#c9a8ff] transition-colors">
-            {drop.title}
-          </h3>
-          <p className="mt-3 text-sm text-zinc-400 leading-relaxed line-clamp-2">
-            {drop.description}
-          </p>
+          <span className="text-xs text-zinc-400">{published}</span>
         </div>
+        <h3 className="mt-4 flex items-start justify-between gap-3 text-lg font-semibold leading-snug tracking-tight text-white [overflow-wrap:anywhere]">
+          <span className="transition-colors group-hover:text-[#c9a8ff]">{drop.title}</span>
+          <ArrowUpRight size={18} className="mt-0.5 shrink-0 text-zinc-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#c9a8ff]" />
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-400">{drop.description}</p>
+      </div>
 
-        <div className="mt-auto pt-5">
-          <div className="flex flex-wrap gap-1 mb-4">
-            {drop.tags.map((tag, idx) => (
-              <span key={idx} className="tag text-xs">{tag}</span>
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <ul className="space-y-2">
+          {jobs.slice(0, 3).map((job) => (
+            <li key={job.id} className="flex min-w-0 items-center gap-2.5 text-[13px]">
+              <CompanyLogo company={job.company} size={22} />
+              <span className="truncate text-zinc-200">{job.title}</span>
+              <span className="shrink-0 truncate text-zinc-400">{job.company}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-auto flex items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-1">
+            {drop.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="tag text-[11px]">{tag}</span>
             ))}
           </div>
-
-          <div className="text-xs text-zinc-500 flex items-center gap-1.5 mb-3">
-            <Calendar size={13} /> {new Date(drop.date_published).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </div>
-
-          {jobs.length > 0 && (
-            <div className="text-xs text-zinc-400 space-y-1">
-              {jobs.map((job, i) => (
-                <div key={i} className="truncate">• {job.title} at {job.company}</div>
+          {companies.length > 0 && (
+            <div className="flex shrink-0 -space-x-2" aria-label={`${companies.length} companies`}>
+              {companies.slice(0, 4).map((c) => (
+                <CompanyLogo key={c} company={c} size={24} className="ring-2 ring-[#0f0c18]" />
               ))}
-              {drop.job_ids.length > 3 && (
-                <div className="text-[#c9a8ff]">+{drop.job_ids.length - 3} more</div>
+              {companies.length > 4 && (
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-[10px] text-zinc-300 ring-2 ring-[#0f0c18]">
+                  +{companies.length - 4}
+                </span>
               )}
             </div>
           )}
