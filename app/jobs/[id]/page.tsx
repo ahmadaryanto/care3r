@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, MapPin, Briefcase, Calendar } from "lucide-rea
 import type { Metadata } from "next";
 import type { Job } from "@/lib/types";
 import { SITE_URL } from "@/lib/site";
+import CompanyLogo from "@/components/CompanyLogo";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -28,7 +29,9 @@ const EMPLOYMENT: Record<string, string> = {
   Freelance: "CONTRACTOR",
 };
 
-// Prebuild every job page.
+// Prebuild every job page; unknown ids are a real 404 (no on-demand render).
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return getAllJobs().map((j) => ({ id: j.id }));
 }
@@ -101,21 +104,26 @@ export default async function JobDetailPage({ params }: Props) {
             <span className="badge">{job.seniority}</span>
           </div>
 
-          <h1 className="text-4xl font-semibold tracking-[-0.8px] leading-tight">{job.title}</h1>
-          <div className="mt-2 flex items-center gap-x-3 text-xl text-zinc-300">
-            <span className="font-medium">{job.company}</span>
-            <span className="text-zinc-600">·</span>
-            <span>{job.source}</span>
+          <div className="flex items-start gap-4">
+            <CompanyLogo company={job.company} size={56} className="mt-1" />
+            <div className="min-w-0">
+              <h1 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-4xl [overflow-wrap:anywhere]">{job.title}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 text-lg text-zinc-300">
+                <span className="font-medium">{job.company}</span>
+                <span className="text-zinc-600">·</span>
+                <span className="text-zinc-400">via {job.source}</span>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3 text-sm">
-            <div className="flex items-center gap-2 bg-[#111114] border border-[#1f1f24] px-4 py-1.5 rounded-xl">
+            <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] px-4 py-1.5 rounded-xl">
               <MapPin size={16} className="text-zinc-400" /> {job.location} · {job.work_mode}
             </div>
-            <div className="flex items-center gap-2 bg-[#111114] border border-[#1f1f24] px-4 py-1.5 rounded-xl">
+            <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] px-4 py-1.5 rounded-xl">
               <Briefcase size={16} className="text-zinc-400" /> {job.employment_type}
             </div>
-            <div className="flex items-center gap-2 bg-[#111114] border border-[#1f1f24] px-4 py-1.5 rounded-xl">
+            <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] px-4 py-1.5 rounded-xl">
               <Calendar size={16} className="text-zinc-400" /> Posted {format(new Date(job.date_posted), "MMM d, yyyy")}
             </div>
             {job.compensation && (

@@ -1,191 +1,106 @@
 "use client";
 
-import React from "react";
-import { Category, Ecosystem, WorkMode, EmploymentType, Seniority } from "@/lib/types";
-
-interface FilterState {
-  categories: Category[];
-  ecosystems: Ecosystem[];
-  workModes: WorkMode[];
-  employmentTypes: EmploymentType[];
-  seniorities: Seniority[];
-  companyTypes: string[];
-}
+import React, { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { FILTER_GROUPS, type FilterKey, type FilterState } from "@/lib/job-filters";
 
 interface JobFiltersProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
-  sort: string;
-  onSortChange: (sort: string) => void;
   onReset: () => void;
-  hideHeader?: boolean;
+  counts: Record<FilterKey, Record<string, number>>;
 }
 
-const CATEGORIES: Category[] = [
-  "Engineering", "Product", "Design", "Business Development", "Marketing", "Community",
-  "Research", "Operations", "Ecosystem Growth", "DevRel", "Security", "Data", "AI x Crypto"
-];
+const DEFAULT_OPEN: FilterKey[] = ["ecosystems", "categories", "workModes", "seniorities"];
 
-const ECOSYSTEMS: Ecosystem[] = [
-  "Solana", "Ethereum", "Avalanche", "Bitcoin", "DeFi", "Infra", "L2", "AI x Crypto",
-  "Gaming", "Consumer Crypto", "Venture / Fund", "DAO", "Protocol", "Startup", "Multi-chain"
-];
+export default function JobFilters({ filters, onChange, onReset, counts }: JobFiltersProps) {
+  const [open, setOpen] = useState<Set<FilterKey>>(new Set(DEFAULT_OPEN));
 
-const WORK_MODES: WorkMode[] = ["Remote", "Hybrid", "On-site"];
-const EMPLOYMENT_TYPES: EmploymentType[] = ["Full-time", "Contract", "Internship", "Part-time"];
-const SENIORITIES: Seniority[] = ["Entry", "Mid", "Senior", "Lead", "Principal", "Head"];
-const COMPANY_TYPES = ["Protocol", "Startup", "Fund", "Infrastructure", "DAO", "Research"];
-
-export default function JobFilters({ filters, onChange, sort, onSortChange, onReset, hideHeader = false }: JobFiltersProps) {
-  const toggle = <T extends string>(arr: T[], value: T): T[] =>
-    arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-
-  const update = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-    onChange({ ...filters, [key]: value });
+  const toggleValue = (key: FilterKey, value: string) => {
+    const current = filters[key] as string[];
+    const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+    onChange({ ...filters, [key]: next });
   };
 
+  const toggleGroup = (key: FilterKey) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
-    <div className="space-y-7">
-      {hideHeader ? (
-        <div className="flex justify-end mb-2">
-          <button onClick={onReset} className="text-xs text-zinc-500 hover:text-zinc-300">Reset all</button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between">
-          <div className="section-title">Filters</div>
-          <button onClick={onReset} className="text-xs text-zinc-500 hover:text-zinc-300">Reset all</button>
-        </div>
-      )}
-
-      {/* Sort - hidden when header is hidden (controlled from parent) */}
-      {!hideHeader && (
-        <div>
-          <div className="text-sm font-medium mb-2 text-zinc-300">Sort</div>
-          <select
-            value={sort}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="input w-full text-sm py-2"
-          >
-            <option value="recent">Recently posted</option>
-            <option value="oldest">Oldest first</option>
-            <option value="title">Title A–Z</option>
-          </select>
-        </div>
-      )}
-
-      {/* Role Category */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Role Category</div>
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((cat) => {
-            const active = filters.categories.includes(cat);
-            return (
-              <button
-                key={cat}
-                onClick={() => update("categories", toggle(filters.categories, cat))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+    <div className="space-y-1">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <span className="section-title">Filters</span>
+        <button type="button" onClick={onReset} className="text-xs text-zinc-400 transition-colors hover:text-white">
+          Reset
+        </button>
       </div>
 
-      {/* Ecosystem */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Ecosystem</div>
-        <div className="flex flex-wrap gap-1.5">
-          {ECOSYSTEMS.map((eco) => {
-            const active = filters.ecosystems.includes(eco);
-            return (
-              <button
-                key={eco}
-                onClick={() => update("ecosystems", toggle(filters.ecosystems, eco))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {eco}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {FILTER_GROUPS.map(({ key, label, options }) => {
+        const selected = filters[key] as string[];
+        const isOpen = open.has(key);
+        // Show options that have results (or are selected), most common first.
+        const visible = options
+          .filter((o) => (counts[key]?.[o] ?? 0) > 0 || selected.includes(o))
+          .sort((a, b) => (counts[key]?.[b] ?? 0) - (counts[key]?.[a] ?? 0));
 
-      {/* Work Mode */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Work Mode</div>
-        <div className="flex flex-wrap gap-1.5">
-          {WORK_MODES.map((mode) => {
-            const active = filters.workModes.includes(mode);
-            return (
-              <button
-                key={mode}
-                onClick={() => update("workModes", toggle(filters.workModes, mode))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {mode}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        return (
+          <section key={key} className="border-b border-white/[0.05] py-2 last:border-0">
+            <button
+              type="button"
+              onClick={() => toggleGroup(key)}
+              aria-expanded={isOpen}
+              className="flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left text-[13px] font-medium text-zinc-200 hover:text-white"
+            >
+              <span>
+                {label}
+                {selected.length > 0 && <span className="ml-1.5 text-[#c9a8ff]">{selected.length}</span>}
+              </span>
+              <ChevronDown size={15} className={`text-zinc-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+            </button>
 
-      {/* Employment Type */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Employment Type</div>
-        <div className="flex flex-wrap gap-1.5">
-          {EMPLOYMENT_TYPES.map((type) => {
-            const active = filters.employmentTypes.includes(type);
-            return (
-              <button
-                key={type}
-                onClick={() => update("employmentTypes", toggle(filters.employmentTypes, type))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {type}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Seniority */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Seniority</div>
-        <div className="flex flex-wrap gap-1.5">
-          {SENIORITIES.map((sen) => {
-            const active = filters.seniorities.includes(sen);
-            return (
-              <button
-                key={sen}
-                onClick={() => update("seniorities", toggle(filters.seniorities, sen))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {sen}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Company Type */}
-      <div>
-        <div className="text-sm font-medium mb-2 text-zinc-300">Company Type</div>
-        <div className="flex flex-wrap gap-1.5">
-          {COMPANY_TYPES.map((ct) => {
-            const active = filters.companyTypes.includes(ct);
-            return (
-              <button
-                key={ct}
-                onClick={() => update("companyTypes", toggle(filters.companyTypes, ct))}
-                className={`filter-chip text-xs ${active ? "active" : ""}`}
-              >
-                {ct}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+            {isOpen && (
+              <ul className="mt-1 space-y-0.5">
+                {visible.length === 0 && <li className="px-1 py-1 text-xs text-zinc-400">No matching roles</li>}
+                {visible.map((option) => {
+                  const active = selected.includes(option);
+                  const count = counts[key]?.[option] ?? 0;
+                  return (
+                    <li key={option}>
+                      <button
+                        type="button"
+                        onClick={() => toggleValue(key, option)}
+                        aria-pressed={active}
+                        className={`group flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${
+                          active ? "bg-[#9b6dff]/12 text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+                            active ? "border-[#9b6dff] bg-[#9b6dff]" : "border-zinc-600 group-hover:border-zinc-400"
+                          }`}
+                          aria-hidden="true"
+                        >
+                          {active && (
+                            <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-white">
+                              <path d="M2.5 6.5l2.2 2.2L9.5 3.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="flex-1 truncate">{option}</span>
+                        <span className={`text-xs tabular-nums ${active ? "text-[#c9a8ff]" : "text-zinc-400"}`}>{count}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

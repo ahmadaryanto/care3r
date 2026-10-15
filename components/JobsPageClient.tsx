@@ -1,11 +1,22 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 import JobCard from "@/components/JobCard";
 import JobFilters from "@/components/JobFilters";
+import JobPreview from "@/components/JobPreview";
 import SearchBar from "@/components/SearchBar";
-import { Category, Ecosystem, WorkMode, EmploymentType, Seniority } from "@/lib/types";
 import type { Job } from "@/lib/types";
+import {
+  EMPTY_FILTERS,
+  FILTER_GROUPS,
+  activeFilterCount,
+  applyFilters,
+  facetCounts,
+  type FilterKey,
+  type FilterState,
+  type SortKey,
+} from "@/lib/job-filters";
 
 interface JobsPageClientProps {
   jobs: Job[];
@@ -17,53 +28,33 @@ interface JobsPageClientProps {
 }
 
 const PAGE_SIZE = 24;
+const SORTS: SortKey[] = ["recent", "oldest", "title"];
 
-export default function JobsPageClient({
-  jobs,
-  lastUpdated,
-  bitgetCount,
-  liveMerged,
-  initialParams,
-}: JobsPageClientProps) {
-  const searchParams = { get: (k: string) => initialParams[k] || null };
+function parseFilters(params: Record<string, string>): FilterState {
+  const out = { ...EMPTY_FILTERS };
+  for (const { key } of FILTER_GROUPS) {
+    const raw = params[key];
+    (out[key] as string[]) = raw ? raw.split(",").filter(Boolean) : [];
+  }
+  return out;
+}
 
-  const parseArray = <T extends string>(param: string | null): T[] =>
-    param ? (param.split(",").filter(Boolean) as T[]) : [];
+export default function JobsPageClient({ jobs, lastUpdated, initialParams }: JobsPageClientProps) {
+  const [search, setSearch] = useState(initialParams.search || "");
+  const [sort, setSort] = useState<SortKey>(SORTS.includes(initialParams.sort as SortKey) ? (initialParams.sort as SortKey) : "recent");
+  const [filters, setFilters] = useState<FilterState>(() => parseFilters(initialParams));
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const initialSearch = searchParams.get("search") || "";
-  const initialSort = (searchParams.get("sort") as "recent" | "oldest" | "title") || "recent";
-
-  const initialFilters = {
-    categories: parseArray<Category>(searchParams.get("categories")),
-    ecosystems: parseArray<Ecosystem>(searchParams.get("ecosystems")),
-    workModes: parseArray<WorkMode>(searchParams.get("workModes")),
-    employmentTypes: parseArray<EmploymentType>(searchParams.get("employmentTypes")),
-    seniorities: parseArray<Seniority>(searchParams.get("seniorities")),
-    companyTypes: parseArray<string>(searchParams.get("companyTypes")),
-  };
-
-  const [search, setSearch] = useState(initialSearch);
-  const [sort, setSort] = useState<"recent" | "oldest" | "title">(initialSort);
-  const [filters, setFilters] = useState(initialFilters);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-
+  // Shareable URLs without a server round-trip per keystroke.
   useEffect(() => {
     const params = new URLSearchParams();
-
     if (search.trim()) params.set("search", search.trim());
     if (sort !== "recent") params.set("sort", sort);
-
-    const setIfAny = (key: string, arr: string[]) => {
+    for (const { key } of FILTER_GROUPS) {
+      const arr = filters[key] as string[];
       if (arr.length) params.set(key, arr.join(","));
-    };
-    setIfAny("categories", filters.categories);
-    setIfAny("ecosystems", filters.ecosystems);
-    setIfAny("workModes", filters.workModes);
-    setIfAny("employmentTypes", filters.employmentTypes);
-    setIfAny("seniorities", filters.seniorities);
-    setIfAny("companyTypes", filters.companyTypes);
-
-    // Shareable URLs without a server round-trip per keystroke.
+    }
     const qs = params.toString();
     const newUrl = qs ? `/jobs?${qs}` : "/jobs";
     if (newUrl !== window.location.pathname + window.location.search) {
@@ -71,175 +62,161 @@ export default function JobsPageClient({
     }
   }, [search, sort, filters]);
 
-  const filteredAndSorted = useMemo(() => {
-    let result = [...jobs].filter((job) => !job.expired);
+  // Lock page scroll while the mobile filter sheet is open.
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSheetOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sheetOpen]);
 
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter((job) => {
-        const haystack = [
-          job.title,
-          job.company,
-          job.ecosystem,
-          job.source,
-          job.description,
-          ...job.tags,
-          job.category,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      });
-    }
+  const results = useMemo(() => applyFilters(jobs, search.trim(), filters, sort), [jobs, search, filters, sort]);
+  const counts = useMemo(() => facetCounts(jobs, search.trim(), filters), [jobs, search, filters]);
+  const activeCount = activeFilterCount(filters);
 
-    if (filters.categories.length) {
-      result = result.filter((j) => filters.categories.includes(j.category));
-    }
-    if (filters.ecosystems.length) {
-      result = result.filter((j) => filters.ecosystems.includes(j.ecosystem));
-    }
-    if (filters.workModes.length) {
-      result = result.filter((j) => filters.workModes.includes(j.work_mode));
-    }
-    if (filters.employmentTypes.length) {
-      result = result.filter((j) => filters.employmentTypes.includes(j.employment_type));
-    }
-    if (filters.seniorities.length) {
-      result = result.filter((j) => filters.seniorities.includes(j.seniority));
-    }
-    if (filters.companyTypes.length) {
-      result = result.filter((j) => filters.companyTypes.includes(j.company_type));
-    }
-
-    if (sort === "recent") {
-      result.sort((a, b) => new Date(b.date_posted).getTime() - new Date(a.date_posted).getTime());
-    } else if (sort === "oldest") {
-      result.sort((a, b) => new Date(a.date_posted).getTime() - new Date(b.date_posted).getTime());
-    } else if (sort === "title") {
-      result.sort((a, b) => a.title.localeCompare(b.title));
-    }
-
-    return result;
-  }, [search, sort, filters, jobs]);
-
-  // Paginate: render PAGE_SIZE cards at a time; reset when the result set changes.
+  // Paginate; reset when the result set changes.
   const resultKey = JSON.stringify([search, sort, filters]);
   const [page, setPage] = useState({ key: resultKey, limit: PAGE_SIZE });
   const limit = page.key === resultKey ? page.limit : PAGE_SIZE;
-  const visible = filteredAndSorted.slice(0, limit);
+  const visible = results.slice(0, limit);
+  const selected = results.find((j) => j.id === selectedId) ?? null;
 
-  const resetFilters = () => {
-    setFilters({
-      categories: [],
-      ecosystems: [],
-      workModes: [],
-      employmentTypes: [],
-      seniorities: [],
-      companyTypes: [],
-    });
+  const stats = useMemo(() => {
+    const live = jobs.filter((j) => !j.expired);
+    const snapshot = new Date(lastUpdated).getTime();
+    return [
+      { label: "Open roles", value: live.length.toLocaleString("en-US") },
+      { label: "Companies hiring", value: new Set(live.map((j) => j.company)).size.toLocaleString("en-US") },
+      { label: "Remote", value: `${Math.round((live.filter((j) => j.work_mode === "Remote").length / Math.max(live.length, 1)) * 100)}%` },
+      { label: "Added in last 7 days", value: live.filter((j) => snapshot - new Date(j.date_posted).getTime() <= 7 * 864e5).length.toLocaleString("en-US") },
+    ];
+  }, [jobs, lastUpdated]);
+
+  const resetAll = () => {
+    setFilters(EMPTY_FILTERS);
     setSearch("");
     setSort("recent");
   };
 
-  const activeFilterCount =
-    filters.categories.length +
-    filters.ecosystems.length +
-    filters.workModes.length +
-    filters.employmentTypes.length +
-    filters.seniorities.length +
-    filters.companyTypes.length;
+  const removeChip = (key: FilterKey, value: string) =>
+    setFilters({ ...filters, [key]: (filters[key] as string[]).filter((v) => v !== value) });
+
+  // Desktop (xl): open the quick view instead of navigating.
+  const onSelect = (job: Job) => {
+    if (!window.matchMedia("(min-width: 1280px)").matches) return false;
+    setSelectedId(job.id);
+    return true;
+  };
+
+  const chips = FILTER_GROUPS.flatMap(({ key }) => (filters[key] as string[]).map((value) => ({ key, value })));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+    <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10">
+      <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="section-title">Opportunities</div>
-          <h1 className="text-4xl font-semibold tracking-tight">All Jobs</h1>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">All jobs</h1>
+          <p className="mt-1.5 text-sm text-zinc-400">
+            Snapshot from{" "}
+            {new Date(lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
+          </p>
         </div>
-        <div className="text-sm text-zinc-400">
-          {filteredAndSorted.length} of {jobs.length} roles
-          {bitgetCount > 0 && <span className="text-[#c9a8ff]"> • {bitgetCount} Bitget</span>}
-          {lastUpdated && (
-            <span className="block text-xs text-zinc-500 mt-1">
-              Snapshot from {new Date(lastUpdated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
-            </span>
-          )}
-        </div>
-      </div>
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.06] sm:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.label} className="bg-[#0a0710] px-4 py-3 sm:min-w-[130px]">
+              <dt className="text-[11px] uppercase tracking-wider text-zinc-400">{s.label}</dt>
+              <dd className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight text-white">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </header>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-72 flex-shrink-0">
-          <div className="lg:hidden mb-4">
-            <button
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className="w-full flex items-center justify-between btn-secondary text-sm px-4 py-2.5"
-            >
-              <span>
-                Filters {activeFilterCount > 0 && <span className="text-[#c9a8ff]">({activeFilterCount} active)</span>}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_380px]">
+        {/* Sidebar filters (desktop) */}
+        <aside className="hidden lg:block" aria-label="Filters">
+          <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-1">
+            <JobFilters filters={filters} onChange={setFilters} onReset={resetAll} counts={counts} />
+          </div>
+        </aside>
+
+        {/* Results */}
+        <section className="min-w-0" aria-label="Results">
+          <div className="sticky top-14 z-20 -mx-1 mb-3 bg-[#050308]/85 px-1 pb-3 pt-2 backdrop-blur-xl">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchBar value={search} onChange={setSearch} shortcut placeholder="Search jobs, companies, skills…" />
+              </div>
+              <select
+                aria-label="Sort jobs"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className="hidden h-11 rounded-xl border border-[#201c2b] bg-[#0c0814] px-3 text-[13px] text-zinc-200 focus:border-[#9b6dff] focus:outline-none sm:block"
+              >
+                <option value="recent">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="title">A–Z</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                className="flex h-11 items-center gap-2 rounded-xl border border-[#201c2b] bg-[#0c0814] px-3.5 text-[13px] font-medium text-zinc-200 lg:hidden"
+                aria-label={`Filters${activeCount ? `, ${activeCount} active` : ""}`}
+              >
+                <SlidersHorizontal size={15} />
+                <span className="hidden min-[380px]:inline">Filters</span>
+                {activeCount > 0 && (
+                  <span className="rounded-full bg-[#9b6dff] px-1.5 text-[11px] font-semibold text-white">{activeCount}</span>
+                )}
+              </button>
+            </div>
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[13px]">
+              <span className="mr-1 text-zinc-400" aria-live="polite">
+                <span className="font-medium text-white tabular-nums">{results.length}</span> of {jobs.length} roles
               </span>
-              <span className="text-xs">{showMobileFilters ? "Close" : "Open"}</span>
-            </button>
-          </div>
-
-          <div className={`${showMobileFilters ? "block" : "hidden"} lg:block`}>
-            <div className="lg:sticky lg:top-20 p-4 lg:p-0 bg-[#0a0a0f] lg:bg-transparent border border-[#1f1f24] lg:border-none rounded-2xl lg:rounded-none mb-4 lg:mb-0">
-              <JobFilters
-                filters={filters}
-                onChange={setFilters}
-                sort={sort}
-                onSortChange={(s) => setSort(s as "recent" | "oldest" | "title")}
-                onReset={resetFilters}
-                hideHeader
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="mb-6 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-              <div className="flex-1 w-full">
-                <SearchBar value={search} onChange={setSearch} />
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <select
-                  aria-label="Sort jobs"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as "recent" | "oldest" | "title")}
-                  className="input text-xs py-2 w-full sm:w-auto"
+              {chips.map(({ key, value }) => (
+                <button
+                  key={`${key}:${value}`}
+                  type="button"
+                  onClick={() => removeChip(key, value)}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#9b6dff]/30 bg-[#9b6dff]/10 py-0.5 pl-2.5 pr-1.5 text-xs text-[#d9c8ff] transition-colors hover:border-[#9b6dff]/60"
+                  aria-label={`Remove filter ${value}`}
                 >
-                  <option value="recent">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="title">A–Z</option>
-                </select>
-                <button onClick={resetFilters} className="btn-secondary text-xs px-4 py-2 whitespace-nowrap">
-                  Clear
+                  {value}
+                  <X size={12} />
                 </button>
-              </div>
-            </div>
-            <div className="text-[10px] text-zinc-500">
-              Static snapshot • {jobs.length} listings
-              {liveMerged > 0 ? ` • ${liveMerged} scraped` : ""}
-              {bitgetCount > 0 ? ` • ${bitgetCount} Bitget` : ""}
+              ))}
+              {(activeCount > 0 || search) && (
+                <button type="button" onClick={resetAll} className="ml-1 text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline">
+                  Clear all
+                </button>
+              )}
             </div>
           </div>
 
-          {filteredAndSorted.length === 0 ? (
-            <div className="py-12 text-center border border-[#1f1f24] rounded-3xl">
-              <div className="text-xl font-medium mb-2">No matches found</div>
-              <p className="text-zinc-400 mb-4">Try broadening your filters or search terms.</p>
-              <button onClick={resetFilters} className="btn-secondary">Clear filters</button>
+          {results.length === 0 ? (
+            <div className="panel py-14 text-center">
+              <div className="text-lg font-medium text-white">No matches</div>
+              <p className="mt-1 text-sm text-zinc-400">Try fewer filters or a broader search.</p>
+              <button type="button" onClick={resetAll} className="btn-secondary mt-5 text-sm">
+                Clear filters
+              </button>
             </div>
           ) : (
             <>
               <h2 className="sr-only">Job listings</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {visible.map((job) => (
-                  <JobCard key={job.id} job={job} />
+              <div className="flex flex-col gap-2.5">
+                {visible.map((job, i) => (
+                  <JobCard key={job.id} job={job} variant="row" index={i % PAGE_SIZE} selected={job.id === selectedId} onSelect={onSelect} />
                 ))}
               </div>
-              {visible.length < filteredAndSorted.length && (
-                <div className="mt-8 flex flex-col items-center gap-2">
+              {visible.length < results.length && (
+                <div className="mt-6 flex flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setPage({ key: resultKey, limit: limit + PAGE_SIZE })}
@@ -248,14 +225,57 @@ export default function JobsPageClient({
                     Show more roles
                   </button>
                   <span className="text-xs text-zinc-400">
-                    Showing {visible.length} of {filteredAndSorted.length}
+                    Showing {visible.length} of {results.length}
                   </span>
                 </div>
               )}
             </>
           )}
-        </div>
+        </section>
+
+        {/* Quick view (xl) */}
+        <aside className="hidden xl:block" aria-label="Job preview">
+          <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto">
+            <JobPreview job={selected} />
+          </div>
+        </aside>
       </div>
+
+      {/* Mobile filter sheet */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-[90] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+          <button type="button" aria-label="Close filters" className="backdrop absolute inset-0 bg-black/60" onClick={() => setSheetOpen(false)} />
+          <div className="sheet absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t border-white/[0.08] bg-[#0b0812]">
+            <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-3.5">
+              <span className="text-sm font-semibold text-white">Filters</span>
+              <button type="button" onClick={() => setSheetOpen(false)} className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/5 hover:text-white" aria-label="Close filters">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-4 py-3">
+              <div className="mb-3 sm:hidden">
+                <label className="mb-1.5 block text-xs text-zinc-400" htmlFor="sort-mobile">Sort</label>
+                <select
+                  id="sort-mobile"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="h-11 w-full rounded-xl border border-[#201c2b] bg-[#0c0814] px-3 text-[15px] text-zinc-200"
+                >
+                  <option value="recent">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="title">A–Z</option>
+                </select>
+              </div>
+              <JobFilters filters={filters} onChange={setFilters} onReset={resetAll} counts={counts} />
+            </div>
+            <div className="border-t border-white/[0.06] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={() => setSheetOpen(false)} className="btn-primary w-full py-3 text-sm">
+                Show {results.length} roles
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
